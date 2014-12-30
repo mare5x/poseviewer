@@ -14,7 +14,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         super().__init__(parent)
         self.setupUi(self)
         self.optionsDialog = OptionsDialog()  # init OptionsDialog
-        #self.timer = QTimer()  # make a timer ready to be used
+        self.timer = QTimer()  # make a timer ready to be used
 
         self.dirs = ["."]  # the directory of the images, "." = default value
         self.all_files = None  # a list
@@ -28,8 +28,8 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.actionFullscreen.triggered.connect(self.toggle_fullscreen)  # toggle fullscreen
         self.actionSound.triggered.connect(self.toggle_sound)  # toggle sound
 
-        #self.timer.timeout.connect(self.next_image)  # every slide_speed seconds show image
-        #self.timer.timeout.connect(self.beep)  # make a beep sound when the image changes
+        self.timer.timeout.connect(self.next_image)  # every slide_speed seconds show image
+
         self.optionsDialog.changeDirSignal.connect(self.open_dir)
         self.optionsDialog.okButtonSignal.connect(self.set_options)
 
@@ -37,8 +37,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.fullscreen = self.optionsDialog.fullscreen  # Bool
         self.step = 0  # go through all files
         self.is_playing = False  # is the slideshow playing
-        self.soundOn = True  # is the sound turned on
-        self.timer_id = None
+        self.sound = True  # is the sound turned on
 
         self.window_dimensions = self.geometry()  # remember the geometry for returning from fullscreen
         self.imageLabel_dimensions = self.imageLabel.width(), self.imageLabel.height()  # scale the label from fullscreen
@@ -112,6 +111,9 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.step += 1
         self.update_image()
 
+        if self.sound and self.is_playing:  # if the slide show is playing and the sound is on (called by timer timeout)
+            self.beep()
+
     def previous_image(self):
         """
         Called when the previous image is clicked. Decrements self.step and calls update_image.
@@ -179,20 +181,20 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         Toggle whether there should be a beep during a slideshow.
         """
         icon = QIcon()
-        if self.soundOn:  # sound is on and you stop it
-            self.soundOn = False
+        if self.sound:  # sound is on and you stop it
+            self.sound = False
             icon.addPixmap(QPixmap(":/Icons/soundoff.png"), QIcon.Normal, QIcon.Off)
             self.actionSound.setIcon(icon)
         else:  # sound is not on and you put it on
-            self.soundOn = True
+            self.sound = True
             icon.addPixmap(QPixmap(":/Icons/soundon.png"), QIcon.Normal, QIcon.Off)
             self.actionSound.setIcon(icon)
 
     def start_timer(self):
-        self.startTimer(self.slide_speed * 1000)  # ms to s
+        self.timer.start(self.slide_speed * 1000)  # ms to s
 
     def stop_timer(self):
-        self.killTimer(self.timer_id)
+        self.timer.stop()
 
     def zoom_in(self):
         self.update_image(factor=1.25)
@@ -215,15 +217,6 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
             self.zoom_in()
         else:
             self.zoom_out()
-
-    def timerEvent(self, event):
-        """
-        Reimplemented timer to beep or not to beep.
-        """
-        self.timer_id = event.timerId()
-        if self.soundOn:
-            self.beep()
-        self.next_image()
 
     #def resizeEvent(self, event):
     #    """
