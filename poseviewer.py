@@ -16,6 +16,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.optionsDialog = OptionsDialog()  # init OptionsDialog
         #self.timer = QTimer()  # make a timer ready to be used
 
+
         self.dirs = ["."]  # the directory of the images, "." = default value
         self.all_files = None  # a list
 
