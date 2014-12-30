@@ -1,0 +1,15 @@
+ <!DOCTYPE RCC><RCC version="1.0">
+ <qresource>
+     <file>Icons/open.png</file>
+     <file>Icons/pause.png</file>
+     <file>Icons/play.png</file>
+     <file>Icons/settings.png</file>
+     <file>Icons/next.png</file>
+     <file>Icons/previous.png</file>
+     <file>Icons/fullscreen.png</file>
+     <file>Icons/shuffle.png</file>
+     <file>Icons/closefullscreen.png</file>
+     <file>Icons/soundon.png</file>
+     <file>Icons/soundoff.png</file>
+ </qresource>
+ </RCC>

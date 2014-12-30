@@ -1,0 +1,5 @@
+# ignore this dir
+PySlideshow-master/
+
+# ignore
+__pycache__/
