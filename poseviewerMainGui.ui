@@ -52,13 +52,11 @@
    <addaction name="actionExitFullscreen"/>
    <addaction name="separator"/>
    <addaction name="actionPrevious"/>
-   <addaction name="actionPause"/>
    <addaction name="actionPlay"/>
    <addaction name="actionNext"/>
    <addaction name="separator"/>
    <addaction name="actionShuffle"/>
-   <addaction name="actionSoundOn"/>
-   <addaction name="actionSoundOff"/>
+   <addaction name="actionSound"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
   <action name="actionOptions">
@@ -83,30 +81,6 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+O</string>
-   </property>
-  </action>
-  <action name="actionPause">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="icon">
-    <iconset resource="icons.qrc">
-     <normaloff>:/Icons/pause.png</normaloff>:/Icons/pause.png</iconset>
-   </property>
-   <property name="text">
-    <string>Pause</string>
-   </property>
-   <property name="toolTip">
-    <string>Pause (space)</string>
-   </property>
-   <property name="shortcut">
-    <string>Space</string>
-   </property>
-   <property name="visible">
-    <bool>false</bool>
-   </property>
-   <property name="iconVisibleInMenu">
-    <bool>true</bool>
    </property>
   </action>
   <action name="actionPlay">
@@ -214,37 +188,19 @@
     <bool>false</bool>
    </property>
   </action>
-  <action name="actionSoundOn">
+  <action name="actionSound">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="icon">
     <iconset resource="icons.qrc">
      <normaloff>:/Icons/soundon.png</normaloff>:/Icons/soundon.png</iconset>
    </property>
    <property name="text">
-    <string>Turn Sound On</string>
+    <string>Toggle Sound</string>
    </property>
    <property name="toolTip">
-    <string>Turn on sound effects during slideshow.</string>
-   </property>
-   <property name="visible">
-    <bool>false</bool>
-   </property>
-  </action>
-  <action name="actionSoundOff">
-   <property name="enabled">
-    <bool>true</bool>
-   </property>
-   <property name="icon">
-    <iconset resource="icons.qrc">
-     <normaloff>:/Icons/soundoff.png</normaloff>:/Icons/soundoff.png</iconset>
-   </property>
-   <property name="text">
-    <string>Turn Sound Off</string>
-   </property>
-   <property name="toolTip">
-    <string>Turn off sound effects during slideshow.</string>
+    <string>Toggle sound effects during slideshow.</string>
    </property>
    <property name="font">
     <font>

@@ -22,13 +22,11 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.actionOptions.triggered.connect(self.optionsDialog.show)  # connect options (triggered) to open (show) the options dialog
         self.actionOpen.triggered.connect(self.open_dir)
         self.actionPlay.triggered.connect(self.toggle_slideshow)  # show image and start the timer
-        self.actionPause.triggered.connect(self.toggle_slideshow)
         self.actionShuffle.triggered.connect(self.shuffle_list)  # make a shuffled list
         self.actionNext.triggered.connect(self.next_image)
         self.actionPrevious.triggered.connect(self.previous_image)
         self.actionFullscreen.triggered.connect(self.toggle_fullscreen)  # toggle fullscreen
-        self.actionSoundOff.triggered.connect(self.toggle_sound)
-        self.actionSoundOn.triggered.connect(self.toggle_sound)  # toggle sound
+        self.actionSound.triggered.connect(self.toggle_sound)  # toggle sound
 
         #self.timer.timeout.connect(self.next_image)  # every slide_speed seconds show image
         #self.timer.timeout.connect(self.beep)  # make a beep sound when the image changes
@@ -67,7 +65,6 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.update_image()
 
         self.actionPlay.setEnabled(True)
-        self.actionPause.setEnabled(True)
         self.actionNext.setEnabled(True)
         self.actionPrevious.setEnabled(True)
         self.actionShuffle.setEnabled(True)
@@ -78,19 +75,20 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         Also increments self.step and it is called every timer timeout.
         If the slideshow is playing change the icon.
         """
+        icon = QIcon()
         if self.is_playing:  # if it's playing, stop it
-            self.actionPlay.setVisible(True)  # set the icon to a pause button
-            self.actionPause.setVisible(False)
+            icon.addPixmap(QPixmap(":/Icons/play.png"), QIcon.Normal, QIcon.Off)
+            self.actionPlay.setIcon(icon)  # set the icon to a pause button
             self.stop_timer()
             self.is_playing = False
 
         else:  # if it's not playing, play it
             self.beep()
-            self.is_playing = True
-            self.actionPlay.setVisible(False)  # set the icon to a play button
-            self.actionPause.setVisible(True)
+            icon.addPixmap(QPixmap(":/Icons/pause.png"), QIcon.Normal, QIcon.Off)
+            self.actionPlay.setIcon(icon)  # set the icon to a play button
             self.next_image()
             self.start_timer()
+            self.is_playing = True
 
     def update_image(self, size=None, factor=1):
         """
@@ -180,14 +178,15 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         """
         Toggle whether there should be a beep during a slideshow.
         """
+        icon = QIcon()
         if self.soundOn:  # sound is on and you stop it
-            self.actionSoundOn.setVisible(True)
-            self.actionSoundOff.setVisible(False)
             self.soundOn = False
+            icon.addPixmap(QPixmap(":/Icons/soundoff.png"), QIcon.Normal, QIcon.Off)
+            self.actionSound.setIcon(icon)
         else:  # sound is not on and you put it on
-            self.actionSoundOff.setVisible(True)
-            self.actionSoundOn.setVisible(False)
             self.soundOn = True
+            icon.addPixmap(QPixmap(":/Icons/soundon.png"), QIcon.Normal, QIcon.Off)
+            self.actionSound.setIcon(icon)
 
     def start_timer(self):
         self.startTimer(self.slide_speed * 1000)  # ms to s
