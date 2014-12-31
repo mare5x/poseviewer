@@ -160,13 +160,20 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         default.
         Set the color and remove the menubar, except the control buttons.
         """
+        icon = QIcon()
         if self.isFullScreen():  # go back to normal
+            icon.addPixmap(QPixmap(":/Icons/fullscreen.png"), QIcon.Normal, QIcon.Off)  # change icon
+            self.actionFullscreen.setIcon(icon)
+
             self.update_image(size=self.imageLabel_dimensions)
             self.showNormal()
             self.setGeometry(self.window_dimensions)
             self.setPalette(self.default_palette)  # set background to the default color
 
         else:  # go to fullscreen
+            icon.addPixmap(QPixmap(":/Icons/closefullscreen.png"), QIcon.Normal, QIcon.Off)  # change icon
+            self.actionFullscreen.setIcon(icon)
+
             self.window_dimensions = self.geometry()  # save current window settings
             self.imageLabel_dimensions = self.imageLabel.width(), self.imageLabel.height()
             self.showFullScreen()

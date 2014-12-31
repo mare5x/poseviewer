@@ -34,8 +34,14 @@
    <property name="movable">
     <bool>false</bool>
    </property>
+   <property name="iconSize">
+    <size>
+     <width>32</width>
+     <height>32</height>
+    </size>
+   </property>
    <property name="toolButtonStyle">
-    <enum>Qt::ToolButtonTextUnderIcon</enum>
+    <enum>Qt::ToolButtonIconOnly</enum>
    </property>
    <property name="floatable">
     <bool>false</bool>
@@ -49,7 +55,6 @@
    <addaction name="actionOptions"/>
    <addaction name="actionOpen"/>
    <addaction name="actionFullscreen"/>
-   <addaction name="actionExitFullscreen"/>
    <addaction name="separator"/>
    <addaction name="actionPrevious"/>
    <addaction name="actionPlay"/>
@@ -65,7 +70,7 @@
      <normaloff>:/Icons/settings.png</normaloff>:/Icons/settings.png</iconset>
    </property>
    <property name="text">
-    <string>Options</string>
+    <string/>
    </property>
   </action>
   <action name="actionOpen">
@@ -74,10 +79,10 @@
      <normaloff>:/Icons/open.png</normaloff>:/Icons/open.png</iconset>
    </property>
    <property name="text">
-    <string>Open</string>
+    <string/>
    </property>
    <property name="toolTip">
-    <string>Open (Ctrl+O)</string>
+    <string>Open Directory (Ctrl+O)</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+O</string>
@@ -92,10 +97,10 @@
      <normaloff>:/Icons/play.png</normaloff>:/Icons/play.png</iconset>
    </property>
    <property name="text">
-    <string>Play</string>
+    <string/>
    </property>
    <property name="toolTip">
-    <string>Play (space)</string>
+    <string>Toggle slideshow (space)</string>
    </property>
    <property name="shortcut">
     <string>Space</string>
@@ -107,10 +112,10 @@
      <normaloff>:/Icons/fullscreen.png</normaloff>:/Icons/fullscreen.png</iconset>
    </property>
    <property name="text">
-    <string>Fullscreen</string>
+    <string/>
    </property>
    <property name="toolTip">
-    <string>Fullscreen (F11)</string>
+    <string>Toggle Fullscreen (F11)</string>
    </property>
    <property name="shortcut">
     <string>F11</string>
@@ -125,7 +130,7 @@
      <normaloff>:/Icons/previous.png</normaloff>:/Icons/previous.png</iconset>
    </property>
    <property name="text">
-    <string>Previous</string>
+    <string/>
    </property>
    <property name="toolTip">
     <string>Previous image (Left arrow)</string>
@@ -143,7 +148,7 @@
      <normaloff>:/Icons/next.png</normaloff>:/Icons/next.png</iconset>
    </property>
    <property name="text">
-    <string>Next</string>
+    <string/>
    </property>
    <property name="toolTip">
     <string>Next image (Right arrow)</string>
@@ -161,31 +166,10 @@
      <normaloff>:/Icons/shuffle.png</normaloff>:/Icons/shuffle.png</iconset>
    </property>
    <property name="text">
-    <string>Shuffle</string>
+    <string/>
    </property>
    <property name="toolTip">
-    <string>Shuffle order</string>
-   </property>
-  </action>
-  <action name="actionExitFullscreen">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="icon">
-    <iconset resource="icons.qrc">
-     <normaloff>:/Icons/closefullscreen.png</normaloff>:/Icons/closefullscreen.png</iconset>
-   </property>
-   <property name="text">
-    <string>Exit Fullscreen</string>
-   </property>
-   <property name="toolTip">
-    <string>Exit from fullscreen mode.</string>
-   </property>
-   <property name="shortcut">
-    <string>F11</string>
-   </property>
-   <property name="visible">
-    <bool>false</bool>
+    <string>Shuffle images</string>
    </property>
   </action>
   <action name="actionSound">
@@ -197,7 +181,7 @@
      <normaloff>:/Icons/soundon.png</normaloff>:/Icons/soundon.png</iconset>
    </property>
    <property name="text">
-    <string>Toggle Sound</string>
+    <string/>
    </property>
    <property name="toolTip">
     <string>Toggle sound effects during slideshow.</string>
