@@ -5,7 +5,6 @@ import os
 import random
 
 import poseviewerMainGui
-import poseviewerOptionsGui
 
 
 class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
@@ -13,7 +12,6 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setupUi(self)
-        self.optionsDialog = OptionsDialog()  # init OptionsDialog
         self.timer = QTimer()  # make a timer ready to be used
 
         self.scroll_area = QScrollArea()
@@ -24,7 +22,6 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.dirs = ["."]  # the directory of the images, "." = default value
         self.all_files = None  # a list
 
-        self.actionOptions.triggered.connect(self.optionsDialog.show)  # connect options (triggered) to open (show) the options dialog
         self.actionOpen.triggered.connect(self.open_dir)
         self.actionPlay.triggered.connect(self.toggle_slideshow)  # show image and start the timer
         self.actionShuffle.triggered.connect(self.shuffle_list)  # make a shuffled list
@@ -32,17 +29,14 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.actionPrevious.triggered.connect(self.previous_image)
         self.actionFullscreen.triggered.connect(self.toggle_fullscreen)  # toggle fullscreen
         self.actionSound.triggered.connect(self.toggle_sound)  # toggle sound
+        self.actionOptions.triggered.connect(self.set_slide_speed)  # set slide show speed
 
         self.timer.timeout.connect(self.next_image)  # every slide_speed seconds show image
 
-        self.optionsDialog.changeDirSignal.connect(self.open_dir)
-        self.optionsDialog.okButtonSignal.connect(self.set_options)
-
-        self.slide_speed = self.optionsDialog.speed  # slideshow speed in s (int)
-        self.fullscreen = self.optionsDialog.fullscreen  # Bool
         self.step = 0  # go through all files
         self.is_playing = False  # is the slideshow playing
         self.sound = True  # is the sound turned on
+        self.slide_speed = 0
 
         self.window_dimensions = self.geometry()  # remember the geometry for returning from fullscreen
         self.imageLabel_dimensions = self.imageLabel.width(), self.imageLabel.height()  # scale the label from fullscreen
@@ -149,8 +143,16 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         initialize the options, also set step to 0
         """
         self.step = 0
-        self.fullscreen = self.optionsDialog.fullscreen
-        self.slide_speed = self.optionsDialog.speed
+
+    def set_slide_speed(self):
+        """
+        Set the slideshow speed by opening a inputdialog.
+        """
+        slide_speed = QInputDialog()
+        self.slide_speed = slide_speed.getInt(self, "Slideshow speed",
+                                              "Enter slideshow speed (seconds): ",
+                                               value=30, minValue=1)[0]
+        # return type: (int, bool)
 
     def shuffle_list(self):
         """
@@ -223,13 +225,13 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         beep = QSound("beep.wav")
         beep.play()
 
-    def countdown(self):
+    def toggle_osd_timer(self):
         pass
 
     def wheelEvent(self, event):
-        if event.delta() > 0 and Qt.Key_Control:
+        if event.delta() > 0:  # mouse wheel away = zoom in
             self.zoom_in()
-        elif event.delta() < 0 and Qt.Key_Control:
+        elif event.delta() < 0:
             self.zoom_out()
 
     def resizeEvent(self, event):
@@ -238,44 +240,6 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
        (Function override)
        """
        self.update_image()
-
-
-class OptionsDialog(QDialog, poseviewerOptionsGui.Ui_Options):
-
-    changeDirSignal = Signal()  #signals to be emitted
-    okButtonSignal = Signal()
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setupUi(self)
-
-        # default settings
-        self.fullscreen = False
-        self.speed = 30
-
-        self.buttonBox.accepted.connect(self.ok_close)
-        self.buttonBox.rejected.connect(self.cancel_close)
-        self.changeDirButton.clicked.connect(self.open_dir)
-
-    def osd_countdown(self):
-        pass
-
-    def open_dir(self):
-        self.changeDirSignal.emit()
-        self.activateWindow()  # focus the window once you close the filedialog
-
-    def ok_close(self):
-        """
-        Close the dialog when you press the ok button with all the settings.
-        """
-        self.fullscreen = self.fullscreenCheckBox.isChecked()
-        self.speed = self.spinBox.value()
-
-        self.okButtonSignal.emit()
-        self.close()
-
-    def cancel_close(self):
-        self.close()
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
