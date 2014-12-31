@@ -16,6 +16,11 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.optionsDialog = OptionsDialog()  # init OptionsDialog
         self.timer = QTimer()  # make a timer ready to be used
 
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidget(self.imageLabel)
+        self.scroll_area.setWidgetResizable(True)
+        self.setCentralWidget(self.scroll_area)
+
         self.dirs = ["."]  # the directory of the images, "." = default value
         self.all_files = None  # a list
 
@@ -129,7 +134,9 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         if width > 0 and height > 0:
             return pix.scaled(width * factor, height * factor, Qt.KeepAspectRatio, Qt.SmoothTransformation)
         else:
-            return pix.scaled(self.imageLabel.width(), self.imageLabel.height(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            return pix.scaled(self.imageLabel.width() * factor,
+                              self.imageLabel.height() * factor,
+                              Qt.KeepAspectRatio, Qt.SmoothTransformation)
 
     def update_status_bar(self, image_list):
         """
@@ -204,10 +211,10 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.timer.stop()
 
     def zoom_in(self):
-        self.update_image(factor=1.25)
+        self.update_image(factor=1.2)
 
     def zoom_out(self):
-        pass
+        self.update_image(factor=0.8)
 
     def beep(self):
         """
@@ -220,17 +227,17 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         pass
 
     def wheelEvent(self, event):
-        if event.delta() > 0:
+        if event.delta() > 0 and Qt.Key_Control:
             self.zoom_in()
-        else:
+        elif event.delta() < 0 and Qt.Key_Control:
             self.zoom_out()
 
-    #def resizeEvent(self, event):
-    #    """
-    #    Resize the image as you resize the window.
-    #    (Function override)
-    #    """
-    #    self.update_image()
+    def resizeEvent(self, event):
+       """
+       Resize the image as you resize the window.
+       (Function override)
+       """
+       self.update_image()
 
 
 class OptionsDialog(QDialog, poseviewerOptionsGui.Ui_Options):
