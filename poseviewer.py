@@ -225,9 +225,11 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         Toggle whether the timerLabel should be displayed.
         """
         if self.timer_visible:
-            self.actionTimerLabel.setVisible(False)
+            self.elapsed_time = 0
             self.timer_visible = False
+            self.actionTimerLabel.setVisible(False)
             self.stop_label_timer()
+            self.update_timerLabel()
         else:
             self.actionTimerLabel.setVisible(True)
             self.timer_visible = True
@@ -262,9 +264,8 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         """
         Update the timerLabel's contents.
         """
-        if self.timer_visible:
-            self.timerLabel.setText("{0} seconds elapsed".format(self.elapsed_time))
-            self.elapsed_time += 1
+        self.timerLabel.setText("{0} seconds elapsed".format(self.elapsed_time))
+        self.elapsed_time += 1
 
     def wheelEvent(self, event):
         if event.delta() > 0:  # mouse wheel away = zoom in
