@@ -3,6 +3,7 @@ from PySide.QtGui import *
 import sys
 import os
 import random
+import ctypes
 
 import poseviewerMainGui
 
@@ -12,12 +13,17 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setupUi(self)
-        self.timer = QTimer()  # make a timer ready to be used
+        self.slideshow_timer = QTimer()  # make a timer ready to be used
+        self.label_timer = QTimer()  # label timer
 
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidget(self.imageLabel)
-        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setWidgetResizable(True)  # fit to window
         self.setCentralWidget(self.scroll_area)
+
+        self.timerLabel = QLabel()  # timer label
+        self.timerLabel.setStyleSheet("font: 17pt; color: rgb(0, 180, 255)")  # set font size to 17 and color to blueish
+        self.actionTimerLabel = self.toolBar.addWidget(self.timerLabel)  # add the timer label to the toolbar
 
         self.dirs = ["."]  # the directory of the images, "." = default value
         self.all_files = None  # a list
@@ -30,13 +36,17 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.actionFullscreen.triggered.connect(self.toggle_fullscreen)  # toggle fullscreen
         self.actionSound.triggered.connect(self.toggle_sound)  # toggle sound
         self.actionOptions.triggered.connect(self.set_slide_speed)  # set slide show speed
+        self.actionTimer.triggered.connect(self.toggle_label_timer)  # toggle timer display
 
-        self.timer.timeout.connect(self.next_image)  # every slide_speed seconds show image
+        self.label_timer.timeout.connect(self.update_timerLabel)  # update the timer label every second
+        self.slideshow_timer.timeout.connect(self.next_image)  # every slide_speed seconds show image
 
         self.step = 0  # go through all files
         self.is_playing = False  # is the slideshow playing
         self.sound = True  # is the sound turned on
         self.slide_speed = 0
+        self.timer_visible = False
+        self.elapsed_time = 0
 
         self.window_dimensions = self.geometry()  # remember the geometry for returning from fullscreen
         self.imageLabel_dimensions = self.imageLabel.width(), self.imageLabel.height()  # scale the label from fullscreen
@@ -66,6 +76,8 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.actionNext.setEnabled(True)
         self.actionPrevious.setEnabled(True)
         self.actionShuffle.setEnabled(True)
+        self.actionSound.setEnabled(True)
+        self.actionTimer.setEnabled(True)
 
     def toggle_slideshow(self):
         """
@@ -77,7 +89,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         if self.is_playing:  # if it's playing, stop it
             icon.addPixmap(QPixmap(":/Icons/play.png"), QIcon.Normal, QIcon.Off)
             self.actionPlay.setIcon(icon)  # set the icon to a pause button
-            self.stop_timer()
+            self.stop_slideshow_timer()
             self.is_playing = False
 
         else:  # if it's not playing, play it
@@ -85,7 +97,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
             icon.addPixmap(QPixmap(":/Icons/pause.png"), QIcon.Normal, QIcon.Off)
             self.actionPlay.setIcon(icon)  # set the icon to a play button
             self.next_image()
-            self.start_timer()
+            self.start_slideshow_timer()
             self.is_playing = True
 
     def update_image(self, size=None, factor=1):
@@ -108,6 +120,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         Called when the next image is clicked. Increments self.step and calls update_image.
         """
         self.step += 1
+        self.elapsed_time = 0
         self.update_image()
 
         if self.sound and self.is_playing:  # if the slide show is playing and the sound is on (called by timer timeout)
@@ -118,6 +131,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         Called when the previous image is clicked. Decrements self.step and calls update_image.
         """
         self.step -= 1
+        self.elapsed_time = 0
         self.update_image()
 
     def scale_image(self, pix, width=0, height=0, factor=1):
@@ -206,11 +220,30 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
             icon.addPixmap(QPixmap(":/Icons/soundon.png"), QIcon.Normal, QIcon.Off)
             self.actionSound.setIcon(icon)
 
-    def start_timer(self):
-        self.timer.start(self.slide_speed * 1000)  # ms to s
+    def toggle_label_timer(self):
+        """
+        Toggle whether the timerLabel should be displayed.
+        """
+        if self.timer_visible:
+            self.actionTimerLabel.setVisible(False)
+            self.timer_visible = False
+            self.stop_label_timer()
+        else:
+            self.actionTimerLabel.setVisible(True)
+            self.timer_visible = True
+            self.start_label_timer()
 
-    def stop_timer(self):
-        self.timer.stop()
+    def start_slideshow_timer(self):
+        self.slideshow_timer.start(self.slide_speed * 1000)  # ms to s
+
+    def stop_slideshow_timer(self):
+        self.slideshow_timer.stop()
+
+    def start_label_timer(self):
+        self.label_timer.start(1000)  # timeout signal every second
+
+    def stop_label_timer(self):
+        self.label_timer.stop()
 
     def zoom_in(self):
         self.update_image(factor=1.2)
@@ -225,8 +258,13 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         beep = QSound("beep.wav")
         beep.play()
 
-    def toggle_osd_timer(self):
-        pass
+    def update_timerLabel(self):
+        """
+        Update the timerLabel's contents.
+        """
+        if self.timer_visible:
+            self.timerLabel.setText("{0} seconds elapsed".format(self.elapsed_time))
+            self.elapsed_time += 1
 
     def wheelEvent(self, event):
         if event.delta() > 0:  # mouse wheel away = zoom in
@@ -242,6 +280,10 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
        self.update_image()
 
 if __name__ == '__main__':
+    # fix, so the app shows the correct icon in the taskbar
+    myappid = 'Marko.Poseviewer.python.1'
+    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+
     app = QApplication(sys.argv)
     form = MainWindow()
     form.show()

@@ -11,5 +11,7 @@
      <file>Icons/closefullscreen.png</file>
      <file>Icons/soundon.png</file>
      <file>Icons/soundoff.png</file>
+     <file>Icons/timer.png</file>
+     <file>Icons/windowicon.png</file>
  </qresource>
  </RCC>
