@@ -15,6 +15,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.setupUi(self)
         self.slideshow_timer = QTimer()  # make a timer ready to be used
         self.label_timer = QTimer()  # label timer
+        self.elapsed_timer = SecElapsedThread()
 
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidget(self.imageLabel)
@@ -38,7 +39,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.actionOptions.triggered.connect(self.set_slide_speed)  # set slide show speed
         self.actionTimer.triggered.connect(self.toggle_label_timer)  # toggle timer display
 
-        self.label_timer.timeout.connect(self.update_timerLabel)  # update the timer label every second
+        self.elapsed_timer.secElapsed.connect(self.update_timerLabel)  # update the timer label every second
         self.slideshow_timer.timeout.connect(self.next_image)  # every slide_speed seconds show image
 
         self.step = 0  # go through all files
@@ -46,7 +47,6 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.sound = True  # is the sound turned on
         self.slide_speed = 0
         self.timer_visible = False
-        self.elapsed_time = 0
 
         self.window_dimensions = self.geometry()  # remember the geometry for returning from fullscreen
         self.imageLabel_dimensions = self.imageLabel.width(), self.imageLabel.height()  # scale the label from fullscreen
@@ -119,8 +119,13 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         """
         Called when the next image is clicked. Increments self.step and calls update_image.
         """
-        self.step += 1
-        self.elapsed_time = 0
+        if not self.step + 1 > len(self.all_files):  # if we go through all files go back to start
+            self.step += 1
+        else:
+            self.step = 0
+
+        self.elapsed_timer.secs_elapsed = 0
+        self.update_timerLabel()
         self.update_image()
 
         if self.sound and self.is_playing:  # if the slide show is playing and the sound is on (called by timer timeout)
@@ -130,8 +135,13 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         """
         Called when the previous image is clicked. Decrements self.step and calls update_image.
         """
-        self.step -= 1
-        self.elapsed_time = 0
+        if not abs(self.step) + 1 > len(self.all_files):
+            self.step -= 1
+        else:
+            self.step = 0
+
+        self.elapsed_timer.secs_elapsed = 0  # reset timer back to 0
+        self.update_timerLabel()  # immediately update
         self.update_image()
 
     def scale_image(self, pix, width=0, height=0, factor=1):
@@ -225,27 +235,20 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         Toggle whether the timerLabel should be displayed.
         """
         if self.timer_visible:
-            self.elapsed_time = 0
+            self.elapsed_timer.secs_elapsed = 0
             self.timer_visible = False
             self.actionTimerLabel.setVisible(False)
-            self.stop_label_timer()
             self.update_timerLabel()
         else:
             self.actionTimerLabel.setVisible(True)
             self.timer_visible = True
-            self.start_label_timer()
+            self.elapsed_timer.start()
 
     def start_slideshow_timer(self):
         self.slideshow_timer.start(self.slide_speed * 1000)  # ms to s
 
     def stop_slideshow_timer(self):
         self.slideshow_timer.stop()
-
-    def start_label_timer(self):
-        self.label_timer.start(1000)  # timeout signal every second
-
-    def stop_label_timer(self):
-        self.label_timer.stop()
 
     def zoom_in(self):
         self.update_image(factor=1.2)
@@ -264,8 +267,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         """
         Update the timerLabel's contents.
         """
-        self.timerLabel.setText("{0} seconds elapsed".format(self.elapsed_time))
-        self.elapsed_time += 1
+        self.timerLabel.setText("{0} seconds elapsed".format(self.elapsed_timer.secs_elapsed))
 
     def wheelEvent(self, event):
         if event.delta() > 0:  # mouse wheel away = zoom in
@@ -279,6 +281,30 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
        (Function override)
        """
        self.update_image()
+
+
+class SecElapsedThread(QThread):
+    """
+    Thread for continuous time tracking.
+    Emits a secElapsed signal after each second.
+    """
+
+    secElapsed = Signal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.secs_elapsed = 0
+
+    def run(self):
+        timer = QElapsedTimer()
+        timer.start()
+
+        while True:
+            if timer.hasExpired(1000):
+                self.secs_elapsed += 1
+                self.secElapsed.emit()
+                timer.restart()
 
 if __name__ == '__main__':
     # fix, so the app shows the correct icon in the taskbar
