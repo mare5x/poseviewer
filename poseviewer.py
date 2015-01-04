@@ -16,6 +16,8 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.slideshow_timer = QTimer()  # make a timer ready to be used
         self.label_timer = QTimer()  # label timer
         self.elapsed_timer = SecElapsedThread()
+        self.total_time = QElapsedTimer()  # keep a track of the whole time spent in app
+        self.total_time.start()
 
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidget(self.imageLabel)
@@ -38,6 +40,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.actionSound.triggered.connect(self.toggle_sound)  # toggle sound
         self.actionOptions.triggered.connect(self.set_slide_speed)  # set slide show speed
         self.actionTimer.triggered.connect(self.toggle_label_timer)  # toggle timer display
+        self.actionStats.triggered.connect(self.show_stats)  # show stats dialog with CTRL+L
 
         self.elapsed_timer.secElapsed.connect(self.update_timerLabel)  # update the timer label every second
         self.slideshow_timer.timeout.connect(self.next_image)  # every slide_speed seconds show image
@@ -268,6 +271,14 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         Update the timerLabel's contents.
         """
         self.timerLabel.setText("{0} seconds elapsed".format(self.elapsed_timer.secs_elapsed))
+
+    def show_stats(self):
+        """
+        Show stats (app run time).
+        Ran with CTRL+L
+        """
+        QMessageBox.information(self, 'Stats', 'Total time in app: {0:.2f} minutes'.format(
+                                self.total_time.elapsed() / 1000 / 60))
 
     def wheelEvent(self, event):
         if event.delta() > 0:  # mouse wheel away = zoom in

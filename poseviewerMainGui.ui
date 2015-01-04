@@ -186,6 +186,7 @@
    <addaction name="actionSound"/>
    <addaction name="actionTimer"/>
    <addaction name="separator"/>
+   <addaction name="actionStats"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
   <action name="actionOptions">
@@ -335,6 +336,17 @@
    </property>
    <property name="toolTip">
     <string>Toggle timer display</string>
+   </property>
+  </action>
+  <action name="actionStats">
+   <property name="text">
+    <string/>
+   </property>
+   <property name="toolTip">
+    <string>Show statistics</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+L</string>
    </property>
   </action>
  </widget>
