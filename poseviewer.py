@@ -48,7 +48,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.step = 0  # go through all files
         self.is_playing = False  # is the slideshow playing
         self.sound = True  # is the sound turned on
-        self.slide_speed = 0
+        self.slide_speed = 30
         self.timer_visible = False
 
         self.window_dimensions = self.geometry()  # remember the geometry for returning from fullscreen
