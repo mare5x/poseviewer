@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file '.\poseviewerMainGui.ui'
 #
-# Created: Mon Jan  5 20:35:19 2015
+# Created: Mon Jan  5 21:42:27 2015
 #      by: pyside-uic 0.2.15 running on PySide 1.2.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -138,9 +138,6 @@ class Ui_MainWindow(object):
         self.actionTimer.setIcon(icon9)
         self.actionTimer.setText("")
         self.actionTimer.setObjectName("actionTimer")
-        self.actionStats = QtGui.QAction(MainWindow)
-        self.actionStats.setText("")
-        self.actionStats.setObjectName("actionStats")
         self.toolBar.addAction(self.actionOptions)
         self.toolBar.addAction(self.actionOpen)
         self.toolBar.addAction(self.actionFullscreen)
@@ -153,7 +150,6 @@ class Ui_MainWindow(object):
         self.toolBar.addAction(self.actionSound)
         self.toolBar.addAction(self.actionTimer)
         self.toolBar.addSeparator()
-        self.toolBar.addAction(self.actionStats)
 
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
@@ -175,7 +171,5 @@ class Ui_MainWindow(object):
         self.actionShuffle.setToolTip(QtGui.QApplication.translate("MainWindow", "Shuffle images", None, QtGui.QApplication.UnicodeUTF8))
         self.actionSound.setToolTip(QtGui.QApplication.translate("MainWindow", "Toggle sound effects during slideshow.", None, QtGui.QApplication.UnicodeUTF8))
         self.actionTimer.setToolTip(QtGui.QApplication.translate("MainWindow", "Toggle timer display", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionStats.setToolTip(QtGui.QApplication.translate("MainWindow", "Show statistics", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionStats.setShortcut(QtGui.QApplication.translate("MainWindow", "Ctrl+L", None, QtGui.QApplication.UnicodeUTF8))
 
 import icons_rc
