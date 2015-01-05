@@ -24,6 +24,8 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.scroll_area.setWidgetResizable(True)  # fit to window
         self.setCentralWidget(self.scroll_area)
 
+        self.create_actions()
+
         self.timerLabel = QLabel()  # timer label
         self.timerLabel.setStyleSheet("font: 17pt; color: rgb(0, 180, 255)")  # set font size to 17 and color to blueish
         self.actionTimerLabel = self.toolBar.addWidget(self.timerLabel)  # add the timer label to the toolbar
@@ -40,7 +42,6 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.actionSound.triggered.connect(self.toggle_sound)  # toggle sound
         self.actionOptions.triggered.connect(self.set_slide_speed)  # set slide show speed
         self.actionTimer.triggered.connect(self.toggle_label_timer)  # toggle timer display
-        self.actionStats.triggered.connect(self.show_stats)  # show stats dialog with CTRL+L
 
         self.elapsed_timer.secElapsed.connect(self.update_timerLabel)  # update the timer label every second
         self.slideshow_timer.timeout.connect(self.next_image)  # every slide_speed seconds show image
@@ -279,6 +280,15 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         """
         QMessageBox.information(self, 'Stats', 'Total time in app: {0:.2f} minutes'.format(
                                 self.total_time.elapsed() / 1000 / 60))
+
+    def create_actions(self):
+        self.actionStats = QAction("Run time", self,
+                statusTip="Show app run time", triggered=self.show_stats)
+
+    def contextMenuEvent(self, event):
+        menu = QMenu(self)
+        menu.addAction(self.actionStats)
+        menu.exec_(event.globalPos())
 
     def wheelEvent(self, event):
         if event.delta() > 0:  # mouse wheel away = zoom in

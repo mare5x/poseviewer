@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file '.\poseviewerMainGui.ui'
 #
-# Created: Sun Jan  4 15:54:33 2015
+# Created: Mon Jan  5 20:35:19 2015
 #      by: pyside-uic 0.2.15 running on PySide 1.2.2
 #
 # WARNING! All changes made in this file will be lost!
