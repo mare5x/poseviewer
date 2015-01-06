@@ -51,6 +51,8 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.sound = True  # is the sound turned on
         self.slide_speed = 30
         self.timer_visible = False
+        self.flipped = False
+        self.flipped_upside_down = False
 
         self.window_dimensions = self.geometry()  # remember the geometry for returning from fullscreen
         self.imageLabel_dimensions = self.imageLabel.width(), self.imageLabel.height()  # scale the label from fullscreen
@@ -82,6 +84,8 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.actionShuffle.setEnabled(True)
         self.actionSound.setEnabled(True)
         self.actionTimer.setEnabled(True)
+        self.actionFlip.setEnabled(True)
+        self.actionFlipUpDown.setEnabled(True)
 
     def toggle_slideshow(self):
         """
@@ -111,12 +115,12 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         Use the factor for zooming.
         """
         if self.all_files and self.step < len(self.all_files):
-            image = QPixmap(self.all_files[self.step])
+            self.pix_image = QPixmap(self.all_files[self.step])
             if size is not None:
-                image = self.scale_image(image, width=size[0] * factor, height=size[1] * factor)
+                self.pix_image = self.scale_image(width=size[0] * factor, height=size[1] * factor)
             else:
-                image = self.scale_image(image, factor=factor)
-            self.imageLabel.setPixmap(image)
+                self.pix_image = self.scale_image(factor=factor)
+            self.imageLabel.setPixmap(self.pix_image)
             self.update_status_bar(self.all_files)
 
     def next_image(self):
@@ -129,6 +133,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
             self.step = 0
 
         self.elapsed_timer.secs_elapsed = 0
+        self.flipped = False
         self.update_timerLabel()
         self.update_image()
 
@@ -145,20 +150,23 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
             self.step = 0
 
         self.elapsed_timer.secs_elapsed = 0  # reset timer back to 0
+        self.flipped = False
         self.update_timerLabel()  # immediately update
         self.update_image()
 
-    def scale_image(self, pix, width=0, height=0, factor=1):
+    def scale_image(self, width=0, height=0, factor=1):
         """
         Scale the image so if it is too big resize it. Takes a pixmap as an argument.
         Scale to width and height.
         """
         if width > 0 and height > 0:
-            return pix.scaled(width * factor, height * factor, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            return self.pix_image.scaled(width * factor, height * factor,
+                                         Qt.KeepAspectRatio,
+                                         Qt.SmoothTransformation)
         else:
-            return pix.scaled(self.imageLabel.width() * factor,
-                              self.imageLabel.height() * factor,
-                              Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            return self.pix_image.scaled(self.imageLabel.width() * factor,
+                                         self.imageLabel.height() * factor,
+                                         Qt.KeepAspectRatio, Qt.SmoothTransformation)
 
     def update_status_bar(self, image_list):
         """
@@ -248,6 +256,31 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
             self.timer_visible = True
             self.elapsed_timer.start()
 
+    def flip_upside_down(self):
+        if not self.flipped_upside_down:
+            transform = QTransform().rotate(180, Qt.XAxis)
+            self.flipped_upside_down = True
+        else:
+            transform = QTransform().rotate(0, Qt.XAxis)
+            self.flipped_upside_down = False
+
+        pix = self.pix_image.transformed(transform, mode=Qt.SmoothTransformation)
+        self.imageLabel.setPixmap(pix)
+
+    def flip(self):
+        if not self.flipped:
+            transform = QTransform().rotate(180, Qt.YAxis)  # flip
+            self.flipped = True
+        else:
+            transform = QTransform().rotate(0, Qt.YAxis)  # revert back to normal
+            self.flipped = False
+
+        pix = self.pix_image.transformed(transform, mode=Qt.SmoothTransformation)
+        self.imageLabel.setPixmap(pix)
+
+    def normal_fit(self):
+        pass
+
     def start_slideshow_timer(self):
         self.slideshow_timer.start(self.slide_speed * 1000)  # ms to s
 
@@ -271,7 +304,8 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         """
         Update the timerLabel's contents.
         """
-        self.timerLabel.setText("{0} seconds elapsed".format(self.elapsed_timer.secs_elapsed))
+        if self.timer_visible:
+            self.timerLabel.setText("{0} seconds elapsed".format(self.elapsed_timer.secs_elapsed))
 
     def show_stats(self):
         """
@@ -284,10 +318,19 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
     def create_actions(self):
         self.actionStats = QAction("Run time", self,
                 statusTip="Show app run time", triggered=self.show_stats)
+        self.actionFlipUpDown = QAction("Flip upside down", self,
+                statusTip="Flip image upside down", triggered=self.flip_upside_down)
+        self.actionFlip = QAction("Flip image", self,
+                statusTip="Flip image", triggered=self.flip)
+
+        self.actionFlip.setEnabled(False)  # disable and wait for an image to be displayed
+        self.actionFlipUpDown.setEnabled(False)
 
     def contextMenuEvent(self, event):
         menu = QMenu(self)
         menu.addAction(self.actionStats)
+        menu.addAction(self.actionFlipUpDown)
+        menu.addAction(self.actionFlip)
         menu.exec_(event.globalPos())
 
     def wheelEvent(self, event):
