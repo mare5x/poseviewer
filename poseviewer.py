@@ -330,8 +330,12 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         Show stats (app run time).
         Ran with CTRL+L
         """
-        QMessageBox.information(self, 'Stats', 'Total time in app: {0:.0f} minutes and {1:.2f} seconds'.format(
-                                self.total_time.elapsed() / 1000 / 60, self.total_time.elapsed() / 1000))
+        # divmod = divide and modulo -- divmod(1200 / 1000)  =  (1, 200)
+        # [0] = division, [1] = remainder(modulo)
+        secs, ms = divmod(self.total_time.elapsed(), 1000)
+        mins, secs = divmod(secs, 60)
+        QMessageBox.information(self, 'Stats', 'Total time in app: {0:.0f} minutes and {1:.0f} seconds'.format(
+                                mins, secs))
 
     def create_actions(self):
         self.actionStats = QAction("Run time", self,
