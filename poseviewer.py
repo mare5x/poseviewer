@@ -51,8 +51,8 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.sound = True  # is the sound turned on
         self.slide_speed = 30
         self.timer_visible = False
-        self.flipped = False
-        self.flipped_upside_down = False
+        self.bars_displayed = True
+        self.set_flip_options()
 
         self.window_dimensions = self.geometry()  # remember the geometry for returning from fullscreen
         self.imageLabel_dimensions = self.imageLabel.width(), self.imageLabel.height()  # scale the label from fullscreen
@@ -133,7 +133,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
             self.step = 0
 
         self.elapsed_timer.secs_elapsed = 0
-        self.flipped = False
+        self.set_flip_options()
         self.update_timerLabel()
         self.update_image()
 
@@ -150,7 +150,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
             self.step = 0
 
         self.elapsed_timer.secs_elapsed = 0  # reset timer back to 0
-        self.flipped = False
+        self.set_flip_options()
         self.update_timerLabel()  # immediately update
         self.update_image()
 
@@ -179,6 +179,10 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         initialize the options, also set step to 0
         """
         self.step = 0
+
+    def set_flip_options(self):
+        self.flipped = False
+        self.flipped_upside_down = False
 
     def set_slide_speed(self):
         """
@@ -256,6 +260,20 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
             self.timer_visible = True
             self.elapsed_timer.start()
 
+    def toggle_bars(self):
+        """
+        Toggle bars - right click menu, action. Toggle toolbar and
+        statusbar visibility.
+        """
+        if self.bars_displayed:
+            self.toolBar.hide()
+            self.statusBar.hide()
+            self.bars_displayed = False
+        else:
+            self.toolBar.show()
+            self.statusBar.show()
+            self.bars_displayed = True
+
     def flip_upside_down(self):
         if not self.flipped_upside_down:
             transform = QTransform().rotate(180, Qt.XAxis)
@@ -322,6 +340,8 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
                 statusTip="Flip image upside down", triggered=self.flip_upside_down)
         self.actionFlip = QAction("Flip image", self,
                 statusTip="Flip image", triggered=self.flip)
+        self.actionBars = QAction("Hide/Show toolbar and statusbar", self,
+                statusTip="Hide/show toolbar and statusbar", triggered=self.toggle_bars)
 
         self.actionFlip.setEnabled(False)  # disable and wait for an image to be displayed
         self.actionFlipUpDown.setEnabled(False)
@@ -331,7 +351,8 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         menu.addAction(self.actionStats)
         menu.addAction(self.actionFlipUpDown)
         menu.addAction(self.actionFlip)
-        menu.exec_(event.globalPos())
+        menu.addAction(self.actionBars)
+        menu.exec_(event.globalPos())  # show menu at mouse position
 
     def wheelEvent(self, event):
         if event.delta() > 0:  # mouse wheel away = zoom in
