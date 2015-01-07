@@ -40,7 +40,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.actionPrevious.triggered.connect(self.previous_image)
         self.actionFullscreen.triggered.connect(self.toggle_fullscreen)  # toggle fullscreen
         self.actionSound.triggered.connect(self.toggle_sound)  # toggle sound
-        self.actionOptions.triggered.connect(self.set_slide_speed)  # set slide show speed
+        self.actionSpeed.triggered.connect(self.set_slide_speed)  # set slide show speed
         self.actionTimer.triggered.connect(self.toggle_label_timer)  # toggle timer display
 
         self.elapsed_timer.secElapsed.connect(self.update_timerLabel)  # update the timer label every second
@@ -330,8 +330,8 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         Show stats (app run time).
         Ran with CTRL+L
         """
-        QMessageBox.information(self, 'Stats', 'Total time in app: {0:.2f} minutes'.format(
-                                self.total_time.elapsed() / 1000 / 60))
+        QMessageBox.information(self, 'Stats', 'Total time in app: {0:.0f} minutes and {1:.2f} seconds'.format(
+                                self.total_time.elapsed() / 1000 / 60, self.total_time.elapsed() / 1000))
 
     def create_actions(self):
         self.actionStats = QAction("Run time", self,
@@ -348,6 +348,21 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
     def contextMenuEvent(self, event):
         menu = QMenu(self)
+        menu.addAction(self.actionOpen)
+        menu.addAction(self.actionSpeed)
+        menu.addAction(self.actionFullscreen)
+        menu.addSeparator()
+
+        menu.addAction(self.actionPrevious)
+        menu.addAction(self.actionPlay)
+        menu.addAction(self.actionNext)
+        menu.addSeparator()
+
+        menu.addAction(self.actionShuffle)
+        menu.addAction(self.actionSound)
+        menu.addAction(self.actionTimer)
+        menu.addSeparator()
+
         menu.addAction(self.actionStats)
         menu.addAction(self.actionFlipUpDown)
         menu.addAction(self.actionFlip)

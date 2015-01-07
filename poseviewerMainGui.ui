@@ -174,7 +174,7 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
-   <addaction name="actionOptions"/>
+   <addaction name="actionSpeed"/>
    <addaction name="actionOpen"/>
    <addaction name="actionFullscreen"/>
    <addaction name="separator"/>
@@ -188,13 +188,13 @@
    <addaction name="separator"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
-  <action name="actionOptions">
+  <action name="actionSpeed">
    <property name="icon">
     <iconset resource="icons.qrc">
      <normaloff>:/Icons/settings.png</normaloff>:/Icons/settings.png</iconset>
    </property>
    <property name="text">
-    <string/>
+    <string>Change slideshow speed</string>
    </property>
    <property name="toolTip">
     <string>Change slideshow speed</string>
@@ -206,7 +206,7 @@
      <normaloff>:/Icons/open.png</normaloff>:/Icons/open.png</iconset>
    </property>
    <property name="text">
-    <string/>
+    <string>Open Directory</string>
    </property>
    <property name="toolTip">
     <string>Open Directory (Ctrl+O)</string>
@@ -224,7 +224,7 @@
      <normaloff>:/Icons/play.png</normaloff>:/Icons/play.png</iconset>
    </property>
    <property name="text">
-    <string/>
+    <string>Toggle slideshow</string>
    </property>
    <property name="toolTip">
     <string>Toggle slideshow (space)</string>
@@ -239,7 +239,7 @@
      <normaloff>:/Icons/fullscreen.png</normaloff>:/Icons/fullscreen.png</iconset>
    </property>
    <property name="text">
-    <string/>
+    <string>Toggle Fullscreen</string>
    </property>
    <property name="toolTip">
     <string>Toggle Fullscreen (F11)</string>
@@ -257,7 +257,7 @@
      <normaloff>:/Icons/previous.png</normaloff>:/Icons/previous.png</iconset>
    </property>
    <property name="text">
-    <string/>
+    <string>Previous image</string>
    </property>
    <property name="toolTip">
     <string>Previous image (Left arrow)</string>
@@ -275,7 +275,7 @@
      <normaloff>:/Icons/next.png</normaloff>:/Icons/next.png</iconset>
    </property>
    <property name="text">
-    <string/>
+    <string>Next image</string>
    </property>
    <property name="toolTip">
     <string>Next image (Right arrow)</string>
@@ -293,7 +293,7 @@
      <normaloff>:/Icons/shuffle.png</normaloff>:/Icons/shuffle.png</iconset>
    </property>
    <property name="text">
-    <string/>
+    <string>Shuffle images</string>
    </property>
    <property name="toolTip">
     <string>Shuffle images</string>
@@ -308,7 +308,7 @@
      <normaloff>:/Icons/soundon.png</normaloff>:/Icons/soundon.png</iconset>
    </property>
    <property name="text">
-    <string/>
+    <string>Toggle sound effects during slideshow.</string>
    </property>
    <property name="toolTip">
     <string>Toggle sound effects during slideshow.</string>
@@ -331,7 +331,7 @@
      <normaloff>:/Icons/timer.png</normaloff>:/Icons/timer.png</iconset>
    </property>
    <property name="text">
-    <string/>
+    <string>Toggle timer display</string>
    </property>
    <property name="toolTip">
     <string>Toggle timer display</string>
