@@ -24,7 +24,9 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.scroll_area.setWidgetResizable(True)  # fit to window
         self.setCentralWidget(self.scroll_area)
 
-        self.create_actions()
+        setActionOptions = SetActionOptions()
+        setActionOptions.create_actions(self)  # SetActionOptions  --  creates actions not created in designer
+        setActionOptions.add_actions(self)  # SetActionOptions -- adds actions to MainWindow
 
         self.timerLabel = QLabel()  # timer label
         self.timerLabel.setStyleSheet("font: 17pt; color: rgb(0, 180, 255)")  # set font size to 17 and color to blueish
@@ -174,12 +176,6 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         """
         self.statusBar.showMessage("{0}".format(image_list[self.step], self.step, len(image_list)))
 
-    def set_options(self):
-        """
-        initialize the options, also set step to 0
-        """
-        self.step = 0
-
     def set_flip_options(self):
         self.flipped = False
         self.flipped_upside_down = False
@@ -199,7 +195,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         Shuffle the current list of images. Also initialize the settings again.
         Show a warning, if the user tries to click to early.
         """
-        self.set_options()
+        self.step = 0
         self.all_files = random.sample(self.all_files, len(self.all_files))  # create a shuffled new list
 
     def toggle_fullscreen(self):
@@ -258,6 +254,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         else:
             self.actionTimerLabel.setVisible(True)
             self.timer_visible = True
+            self.update_timerLabel()  # for responsiveness
             self.elapsed_timer.start()
 
     def toggle_bars(self):
@@ -288,13 +285,13 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
     def flip(self):
         if not self.flipped:
             transform = QTransform().rotate(180, Qt.YAxis)  # flip
-            self.flipped = True
+            self.flipped = True  # change settings for next image
         else:
             transform = QTransform().rotate(0, Qt.YAxis)  # revert back to normal
             self.flipped = False
 
-        pix = self.pix_image.transformed(transform, mode=Qt.SmoothTransformation)
-        self.imageLabel.setPixmap(pix)
+        pix = self.pix_image.transformed(transform, mode=Qt.SmoothTransformation)  # apply transform
+        self.imageLabel.setPixmap(pix)  # update image label
 
     def normal_fit(self):
         pass
@@ -337,19 +334,6 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         QMessageBox.information(self, 'Stats', 'Total time in app: {0:.0f} minutes and {1:.0f} seconds'.format(
                                 mins, secs))
 
-    def create_actions(self):
-        self.actionStats = QAction("Run time", self,
-                statusTip="Show app run time", triggered=self.show_stats)
-        self.actionFlipUpDown = QAction("Flip upside down", self,
-                statusTip="Flip image upside down", triggered=self.flip_upside_down)
-        self.actionFlip = QAction("Flip image", self,
-                statusTip="Flip image", triggered=self.flip)
-        self.actionBars = QAction("Hide/Show toolbar and statusbar", self,
-                statusTip="Hide/show toolbar and statusbar", triggered=self.toggle_bars)
-
-        self.actionFlip.setEnabled(False)  # disable and wait for an image to be displayed
-        self.actionFlipUpDown.setEnabled(False)
-
     def contextMenuEvent(self, event):
         menu = QMenu(self)
         menu.addAction(self.actionOpen)
@@ -380,11 +364,15 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
             self.zoom_out()
 
     def resizeEvent(self, event):
-       """
-       Resize the image as you resize the window.
-       (Function override)
-       """
-       self.update_image()
+        """
+        Resize the image as you resize the window.
+        (Function override)
+        """
+        self.update_image()
+
+    def closeEvent(self, event):
+        self.elapsed_timer.exit = True  # safe thread exit
+        event.accept()  # close app
 
 
 class SecElapsedThread(QThread):
@@ -399,16 +387,43 @@ class SecElapsedThread(QThread):
         super().__init__(parent)
 
         self.secs_elapsed = 0
+        self.exit = False  # for safe exiting  -  not stuck in while loop
 
     def run(self):
         timer = QElapsedTimer()
         timer.start()
 
-        while True:
+        while not self.exit:
             if timer.hasExpired(1000):
                 self.secs_elapsed += 1
                 self.secElapsed.emit()
                 timer.restart()
+
+
+class SetActionOptions():
+    def add_actions(self, MainWindow):
+        MainWindow.addAction(MainWindow.actionSpeed)
+        MainWindow.addAction(MainWindow.actionOpen)
+        MainWindow.addAction(MainWindow.actionFullscreen)
+        MainWindow.addAction(MainWindow.actionPrevious)
+        MainWindow.addAction(MainWindow.actionPlay)
+        MainWindow.addAction(MainWindow.actionNext)
+        MainWindow.addAction(MainWindow.actionShuffle)
+        MainWindow.addAction(MainWindow.actionSound)
+        MainWindow.addAction(MainWindow.actionTimer)
+
+    def create_actions(self, MainWindow):
+        MainWindow.actionStats = QAction("Run time", MainWindow,
+                statusTip="Show app run time", triggered=MainWindow.show_stats)
+        MainWindow.actionFlipUpDown = QAction("Flip upside down", MainWindow,
+                statusTip="Flip image upside down", triggered=MainWindow.flip_upside_down)
+        MainWindow.actionFlip = QAction("Flip image", MainWindow,
+                statusTip="Flip image", triggered=MainWindow.flip)
+        MainWindow.actionBars = QAction("Hide/Show toolbar and statusbar", MainWindow,
+                statusTip="Hide/show toolbar and statusbar", triggered=MainWindow.toggle_bars)
+
+        MainWindow.actionFlip.setEnabled(False)  # disable and wait for an image to be displayed
+        MainWindow.actionFlipUpDown.setEnabled(False)
 
 if __name__ == '__main__':
     # fix, so the app shows the correct icon in the taskbar
