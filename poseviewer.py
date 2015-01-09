@@ -13,11 +13,11 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setupUi(self)
+
         self.slideshow_timer = QTimer()  # make a timer ready to be used
-        self.label_timer = QTimer()  # label timer
         self.elapsed_timer = SecElapsedThread()
-        self.total_time = QElapsedTimer()  # keep a track of the whole time spent in app
-        self.total_time.start()
+        self.total_time_elapsed = QElapsedTimer()  # keep a track of the whole time spent in app
+        self.total_time_elapsed.start()
 
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidget(self.imageLabel)
@@ -134,7 +134,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         else:
             self.step = 0
 
-        self.elapsed_timer.secs_elapsed = 0
+        self.elapsed_timer.set_time_to_zero()
         self.set_flip_options()
         self.update_timerLabel()
         self.update_image()
@@ -151,7 +151,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         else:
             self.step = 0
 
-        self.elapsed_timer.secs_elapsed = 0  # reset timer back to 0
+        self.elapsed_timer.set_time_to_zero()  # reset timer back to 0
         self.set_flip_options()
         self.update_timerLabel()  # immediately update
         self.update_image()
@@ -247,13 +247,14 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         Toggle whether the timerLabel should be displayed.
         """
         if self.timer_visible:
-            self.elapsed_timer.secs_elapsed = 0
+            self.elapsed_timer.set_time_to_zero()
             self.timer_visible = False
             self.actionTimerLabel.setVisible(False)
             self.update_timerLabel()
         else:
             self.actionTimerLabel.setVisible(True)
             self.timer_visible = True
+            self.elapsed_timer.set_time_to_zero()
             self.update_timerLabel()  # for responsiveness
             self.elapsed_timer.start()
 
@@ -320,7 +321,10 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         Update the timerLabel's contents.
         """
         if self.timer_visible:
-            self.timerLabel.setText("{0} seconds elapsed".format(self.elapsed_timer.secs_elapsed))
+            self.timerLabel.setText("{0:02.0f}:{1:02.0f}:{2:02.0f}".format(
+                                    self.elapsed_timer.hours,
+                                    self.elapsed_timer.mins,
+                                    self.elapsed_timer.secs))  # no remainder shown
 
     def show_stats(self):
         """
@@ -329,10 +333,13 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         """
         # divmod = divide and modulo -- divmod(1200 / 1000)  =  (1, 200)
         # [0] = division, [1] = remainder(modulo)
-        secs, ms = divmod(self.total_time.elapsed(), 1000)
-        mins, secs = divmod(secs, 60)
-        QMessageBox.information(self, 'Stats', 'Total time in app: {0:.0f} minutes and {1:.0f} seconds'.format(
-                                mins, secs))
+        secs, ms = divmod(self.total_time_elapsed.elapsed(), 1000)  # ms to s
+        mins, secs = divmod(secs, 60)  # s to min
+        hours, mins = divmod(mins, 60)  # min to h
+
+        QMessageBox.information(self, 'Stats', 'Total time in app: {0:02.0f} hours '
+                                               '{1:02.0f} minutes and {2:02.0f} seconds'.format(
+                                                hours, mins, secs))
 
     def contextMenuEvent(self, event):
         menu = QMenu(self)
@@ -386,7 +393,7 @@ class SecElapsedThread(QThread):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.secs_elapsed = 0
+        self.set_time_to_zero()
         self.exit = False  # for safe exiting  -  not stuck in while loop
 
     def run(self):
@@ -394,10 +401,23 @@ class SecElapsedThread(QThread):
         timer.start()
 
         while not self.exit:
-            if timer.hasExpired(1000):
-                self.secs_elapsed += 1
+            if timer.hasExpired(1000):  # 1 seconds expired
+                self.secs_elapsed += 1  # secs_elapsed instead of secs because secs is recalculated
+                self.set_time_elapsed()  # don't calculate from ms because we always restart the timer
                 self.secElapsed.emit()
                 timer.restart()
+
+    def set_time_elapsed(self):
+        """
+        Calculate elapsed hours, minutes, seconds.
+        """
+        # divmod = divide and modulo -- divmod(1200 / 1000)  =  (1, 200)
+        # [0] = division, [1] = remainder(modulo)
+        self.mins, self.secs = divmod(self.secs_elapsed, 60)  # s to min
+        self.hours, self.mins = divmod(self.mins, 60)  # min to h
+
+    def set_time_to_zero(self):
+        self.secs_elapsed, self.secs, self.mins, self.hours = 0, 0, 0, 0
 
 
 class SetActionOptions():
