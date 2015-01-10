@@ -13,20 +13,21 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setupUi(self)
+        self.imageOptions = ImageOptions()
 
-        self.slideshow_timer = QTimer()  # make a timer ready to be used
-        self.elapsed_timer = SecElapsedThread()
-        self.total_time_elapsed = QElapsedTimer()  # keep a track of the whole time spent in app
-        self.total_time_elapsed.start()
+        self.slideshowTimer = QTimer()  # make a timer ready to be used
+        self.timeElapsedTimer = TimeElapsedThread()
+        self.totalTimeElapsed = QElapsedTimer()  # keep a track of the whole time spent in app
+        self.totalTimeElapsed.start()
 
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidget(self.imageLabel)
         self.scroll_area.setWidgetResizable(True)  # fit to window
         self.setCentralWidget(self.scroll_area)
 
-        setActionOptions = SetActionOptions()
-        setActionOptions.create_actions(self)  # SetActionOptions  --  creates actions not created in designer
-        setActionOptions.add_actions(self)  # SetActionOptions -- adds actions to MainWindow
+        self.setActionOptions = SetActionOptions(self)
+        self.setActionOptions.create_actions()  # SetActionOptions  --  creates actions not created in designer
+        self.setActionOptions.add_actions()  # SetActionOptions -- adds actions to MainWindow
 
         self.timerLabel = QLabel()  # timer label
         self.timerLabel.setStyleSheet("font: 17pt; color: rgb(0, 180, 255)")  # set font size to 17 and color to blueish
@@ -45,8 +46,8 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.actionSpeed.triggered.connect(self.set_slide_speed)  # set slide show speed
         self.actionTimer.triggered.connect(self.toggle_label_timer)  # toggle timer display
 
-        self.elapsed_timer.secElapsed.connect(self.update_timerLabel)  # update the timer label every second
-        self.slideshow_timer.timeout.connect(self.next_image)  # every slide_speed seconds show image
+        self.timeElapsedTimer.secElapsed.connect(self.update_timerLabel)  # update the timer label every second
+        self.slideshowTimer.timeout.connect(self.next_image)  # every slide_speed seconds show image
 
         self.step = 0  # go through all files
         self.is_playing = False  # is the slideshow playing
@@ -54,7 +55,6 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.slide_speed = 30
         self.timer_visible = False
         self.bars_displayed = True
-        self.set_flip_options()
 
         self.window_dimensions = self.geometry()  # remember the geometry for returning from fullscreen
         self.imageLabel_dimensions = self.imageLabel.width(), self.imageLabel.height()  # scale the label from fullscreen
@@ -80,14 +80,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
                         self.dirs[-1]) if os.path.isfile(os.path.join(self.dirs[-1], f))]
         self.update_image()
 
-        self.actionPlay.setEnabled(True)
-        self.actionNext.setEnabled(True)
-        self.actionPrevious.setEnabled(True)
-        self.actionShuffle.setEnabled(True)
-        self.actionSound.setEnabled(True)
-        self.actionTimer.setEnabled(True)
-        self.actionFlip.setEnabled(True)
-        self.actionFlipUpDown.setEnabled(True)
+        self.setActionOptions.enable_actions()  # enable the actions
 
     def toggle_slideshow(self):
         """
@@ -99,7 +92,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         if self.is_playing:  # if it's playing, stop it
             icon.addPixmap(QPixmap(":/Icons/play.png"), QIcon.Normal, QIcon.Off)
             self.actionPlay.setIcon(icon)  # set the icon to a pause button
-            self.stop_slideshow_timer()
+            self.stop_slideshowTimer()
             self.is_playing = False
 
         else:  # if it's not playing, play it
@@ -107,7 +100,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
             icon.addPixmap(QPixmap(":/Icons/pause.png"), QIcon.Normal, QIcon.Off)
             self.actionPlay.setIcon(icon)  # set the icon to a play button
             self.next_image()
-            self.start_slideshow_timer()
+            self.start_slideshowTimer()
             self.is_playing = True
 
     def update_image(self, size=None, factor=1):
@@ -134,8 +127,8 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         else:
             self.step = 0
 
-        self.elapsed_timer.set_time_to_zero()
-        self.set_flip_options()
+        self.timeElapsedTimer.set_time_to_zero()
+        self.imageOptions.set_flip_options()
         self.update_timerLabel()
         self.update_image()
 
@@ -151,8 +144,8 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         else:
             self.step = 0
 
-        self.elapsed_timer.set_time_to_zero()  # reset timer back to 0
-        self.set_flip_options()
+        self.timeElapsedTimer.set_time_to_zero()  # reset timer back to 0
+        self.imageOptions.set_flip_options()
         self.update_timerLabel()  # immediately update
         self.update_image()
 
@@ -175,10 +168,6 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         Update the status bar with the image title and file location.
         """
         self.statusBar.showMessage("{0}".format(image_list[self.step], self.step, len(image_list)))
-
-    def set_flip_options(self):
-        self.flipped = False
-        self.flipped_upside_down = False
 
     def set_slide_speed(self):
         """
@@ -247,16 +236,16 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         Toggle whether the timerLabel should be displayed.
         """
         if self.timer_visible:
-            self.elapsed_timer.set_time_to_zero()
+            self.timeElapsedTimer.set_time_to_zero()
             self.timer_visible = False
             self.actionTimerLabel.setVisible(False)
             self.update_timerLabel()
         else:
             self.actionTimerLabel.setVisible(True)
             self.timer_visible = True
-            self.elapsed_timer.set_time_to_zero()
+            self.timeElapsedTimer.set_time_to_zero()
             self.update_timerLabel()  # for responsiveness
-            self.elapsed_timer.start()
+            self.timeElapsedTimer.start()
 
     def toggle_bars(self):
         """
@@ -273,35 +262,29 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
             self.bars_displayed = True
 
     def flip_upside_down(self):
-        if not self.flipped_upside_down:
-            transform = QTransform().rotate(180, Qt.XAxis)
-            self.flipped_upside_down = True
-        else:
-            transform = QTransform().rotate(0, Qt.XAxis)
-            self.flipped_upside_down = False
-
-        pix = self.pix_image.transformed(transform, mode=Qt.SmoothTransformation)
+        pix = self.imageOptions.flip_upside_down_pix(self.pix_image)
         self.imageLabel.setPixmap(pix)
 
     def flip(self):
-        if not self.flipped:
-            transform = QTransform().rotate(180, Qt.YAxis)  # flip
-            self.flipped = True  # change settings for next image
-        else:
-            transform = QTransform().rotate(0, Qt.YAxis)  # revert back to normal
-            self.flipped = False
+        pix = self.imageOptions.flip_pix(self.pix_image)
+        self.imageLabel.setPixmap(pix)
 
-        pix = self.pix_image.transformed(transform, mode=Qt.SmoothTransformation)  # apply transform
-        self.imageLabel.setPixmap(pix)  # update image label
+    def rotate_right(self):
+        pix = self.imageOptions.rotate_right_pix(self.pix_image)
+        self.imageLabel.setPixmap(pix)
+
+    def rotate_left(self):
+        pix = self.imageOptions.rotate_left_pix(self.pix_image)
+        self.imageLabel.setPixmap(pix)
 
     def normal_fit(self):
         pass
 
-    def start_slideshow_timer(self):
-        self.slideshow_timer.start(self.slide_speed * 1000)  # ms to s
+    def start_slideshowTimer(self):
+        self.slideshowTimer.start(self.slide_speed * 1000)  # ms to s
 
-    def stop_slideshow_timer(self):
-        self.slideshow_timer.stop()
+    def stop_slideshowTimer(self):
+        self.slideshowTimer.stop()
 
     def zoom_in(self):
         self.update_image(factor=1.2)
@@ -322,9 +305,9 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         """
         if self.timer_visible:
             self.timerLabel.setText("{0:02.0f}:{1:02.0f}:{2:02.0f}".format(
-                                    self.elapsed_timer.hours,
-                                    self.elapsed_timer.mins,
-                                    self.elapsed_timer.secs))  # no remainder shown
+                                    self.timeElapsedTimer.hours,
+                                    self.timeElapsedTimer.mins,
+                                    self.timeElapsedTimer.secs))  # no remainder shown
 
     def show_stats(self):
         """
@@ -333,7 +316,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         """
         # divmod = divide and modulo -- divmod(1200 / 1000)  =  (1, 200)
         # [0] = division, [1] = remainder(modulo)
-        secs, ms = divmod(self.total_time_elapsed.elapsed(), 1000)  # ms to s
+        secs, ms = divmod(self.totalTimeElapsed.elapsed(), 1000)  # ms to s
         mins, secs = divmod(secs, 60)  # s to min
         hours, mins = divmod(mins, 60)  # min to h
 
@@ -343,25 +326,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
     def contextMenuEvent(self, event):
         menu = QMenu(self)
-        menu.addAction(self.actionOpen)
-        menu.addAction(self.actionSpeed)
-        menu.addAction(self.actionFullscreen)
-        menu.addSeparator()
-
-        menu.addAction(self.actionPrevious)
-        menu.addAction(self.actionPlay)
-        menu.addAction(self.actionNext)
-        menu.addSeparator()
-
-        menu.addAction(self.actionShuffle)
-        menu.addAction(self.actionSound)
-        menu.addAction(self.actionTimer)
-        menu.addSeparator()
-
-        menu.addAction(self.actionStats)
-        menu.addAction(self.actionFlipUpDown)
-        menu.addAction(self.actionFlip)
-        menu.addAction(self.actionBars)
+        self.setActionOptions.add_to_context_menu(menu)
         menu.exec_(event.globalPos())  # show menu at mouse position
 
     def wheelEvent(self, event):
@@ -378,11 +343,11 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.update_image()
 
     def closeEvent(self, event):
-        self.elapsed_timer.exit = True  # safe thread exit
+        self.timeElapsedTimer.exit = True  # safe thread exit
         event.accept()  # close app
 
 
-class SecElapsedThread(QThread):
+class TimeElapsedThread(QThread):
     """
     Thread for continuous time tracking.
     Emits a secElapsed signal after each second.
@@ -421,29 +386,113 @@ class SecElapsedThread(QThread):
 
 
 class SetActionOptions():
-    def add_actions(self, MainWindow):
-        MainWindow.addAction(MainWindow.actionSpeed)
-        MainWindow.addAction(MainWindow.actionOpen)
-        MainWindow.addAction(MainWindow.actionFullscreen)
-        MainWindow.addAction(MainWindow.actionPrevious)
-        MainWindow.addAction(MainWindow.actionPlay)
-        MainWindow.addAction(MainWindow.actionNext)
-        MainWindow.addAction(MainWindow.actionShuffle)
-        MainWindow.addAction(MainWindow.actionSound)
-        MainWindow.addAction(MainWindow.actionTimer)
+    def __init__(self, MainWindow):
+        self.MW = MainWindow
 
-    def create_actions(self, MainWindow):
-        MainWindow.actionStats = QAction("Run time", MainWindow,
-                statusTip="Show app run time", triggered=MainWindow.show_stats)
-        MainWindow.actionFlipUpDown = QAction("Flip upside down", MainWindow,
-                statusTip="Flip image upside down", triggered=MainWindow.flip_upside_down)
-        MainWindow.actionFlip = QAction("Flip image", MainWindow,
-                statusTip="Flip image", triggered=MainWindow.flip)
-        MainWindow.actionBars = QAction("Hide/Show toolbar and statusbar", MainWindow,
-                statusTip="Hide/show toolbar and statusbar", triggered=MainWindow.toggle_bars)
+    def add_actions(self):
+        self.MW.addAction(self.MW.actionSpeed)
+        self.MW.addAction(self.MW.actionOpen)
+        self.MW.addAction(self.MW.actionFullscreen)
+        self.MW.addAction(self.MW.actionPrevious)
+        self.MW.addAction(self.MW.actionPlay)
+        self.MW.addAction(self.MW.actionNext)
+        self.MW.addAction(self.MW.actionShuffle)
+        self.MW.addAction(self.MW.actionSound)
+        self.MW.addAction(self.MW.actionTimer)
 
-        MainWindow.actionFlip.setEnabled(False)  # disable and wait for an image to be displayed
-        MainWindow.actionFlipUpDown.setEnabled(False)
+    def create_actions(self):
+        self.MW.actionStats = QAction("Run time", self.MW,
+                statusTip="Show app run time", triggered=self.MW.show_stats)
+        self.MW.actionBars = QAction("Hide/Show toolbar and statusbar", self.MW,
+                statusTip="Hide/show toolbar and statusbar", triggered=self.MW.toggle_bars)
+
+        self.MW.actionFlipUpDown = QAction("Flip upside down", self.MW,
+                statusTip="Flip image upside down", triggered=self.MW.flip_upside_down,
+                enabled=False)
+        self.MW.actionFlip = QAction("Flip image", self.MW,
+                statusTip="Flip image", triggered=self.MW.flip, enabled=False)
+        self.MW.actionRotateRight = QAction("Rotate image right", self.MW,
+                statusTip="Rotate image by 90° to the right", triggered=self.MW.rotate_right,
+                enabled=False)
+        self.MW.actionRotateLeft = QAction("Rotate image left", self.MW,
+                statusTip="Rotate image by 90° to the left", triggered=self.MW.rotate_left,
+                enabled=False)
+
+    def enable_actions(self):
+        self.MW.actionPlay.setEnabled(True)
+        self.MW.actionNext.setEnabled(True)
+        self.MW.actionPrevious.setEnabled(True)
+        self.MW.actionShuffle.setEnabled(True)
+        self.MW.actionSound.setEnabled(True)
+        self.MW.actionTimer.setEnabled(True)
+        self.MW.actionFlip.setEnabled(True)
+        self.MW.actionFlipUpDown.setEnabled(True)
+        self.MW.actionRotateRight.setEnabled(True)
+        self.MW.actionRotateLeft.setEnabled(True)
+
+    def add_to_context_menu(self, menu):
+        menu.addAction(self.MW.actionOpen)
+        menu.addAction(self.MW.actionSpeed)
+        menu.addAction(self.MW.actionFullscreen)
+        menu.addSeparator()
+
+        menu.addAction(self.MW.actionPrevious)
+        menu.addAction(self.MW.actionPlay)
+        menu.addAction(self.MW.actionNext)
+        menu.addSeparator()
+
+        menu.addAction(self.MW.actionShuffle)
+        menu.addAction(self.MW.actionSound)
+        menu.addAction(self.MW.actionTimer)
+        menu.addSeparator()
+
+        menu.addAction(self.MW.actionStats)
+        menu.addAction(self.MW.actionFlipUpDown)
+        menu.addAction(self.MW.actionFlip)
+        menu.addAction(self.MW.actionRotateRight)
+        menu.addAction(self.MW.actionRotateLeft)
+        menu.addAction(self.MW.actionBars)
+
+
+class ImageOptions():
+    def __init__(self):
+        self.set_flip_options()
+
+    def flip_upside_down_pix(self, pix_image):
+        if not self.flipped_upside_down:
+            transform = QTransform().rotate(180, Qt.XAxis)
+            self.flipped_upside_down = True
+        else:
+            transform = QTransform().rotate(0, Qt.XAxis)
+            self.flipped_upside_down = False
+
+        return pix_image.transformed(transform, mode=Qt.SmoothTransformation)
+
+    def flip_pix(self, pix_image):
+        if not self.flipped:
+            transform = QTransform().rotate(180, Qt.YAxis)  # flip
+            self.flipped = True  # change settings for next image
+        else:
+            transform = QTransform().rotate(0, Qt.YAxis)  # revert back to normal
+            self.flipped = False
+
+        return pix_image.transformed(transform, mode=Qt.SmoothTransformation)  # apply transform
+
+    def rotate_right_pix(self, pix_image):
+        transform = QTransform().rotate(90)
+        return pix_image.transformed(transform, mode=Qt.SmoothTransformation)
+
+    def rotate_left_pix(self, pix_image):
+        transform = QTransform().rotate(270)
+        return pix_image.transformed(transform, mode=Qt.SmoothTransformation)
+
+    def normal_fit(self, pix_image):
+        pass
+
+    def set_flip_options(self):
+        self.flipped = False
+        self.flipped_upside_down = False
+
 
 if __name__ == '__main__':
     # fix, so the app shows the correct icon in the taskbar
