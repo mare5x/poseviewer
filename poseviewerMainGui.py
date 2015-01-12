@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file '.\poseviewerMainGui.ui'
 #
-# Created: Wed Jan  7 18:16:32 2015
+# Created: Mon Jan 12 20:43:23 2015
 #      by: pyside-uic 0.2.15 running on PySide 1.2.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -20,11 +20,13 @@ class Ui_MainWindow(object):
         self.centralwidget.setObjectName("centralwidget")
         self.gridLayout = QtGui.QGridLayout(self.centralwidget)
         self.gridLayout.setObjectName("gridLayout")
-        self.imageLabel = QtGui.QLabel(self.centralwidget)
-        self.imageLabel.setText("")
-        self.imageLabel.setAlignment(QtCore.Qt.AlignCenter)
-        self.imageLabel.setObjectName("imageLabel")
-        self.gridLayout.addWidget(self.imageLabel, 0, 0, 1, 1)
+        self.graphicsView = QtGui.QGraphicsView(self.centralwidget)
+        self.graphicsView.setFrameShape(QtGui.QFrame.NoFrame)
+        self.graphicsView.setInteractive(True)
+        self.graphicsView.setRenderHints(QtGui.QPainter.HighQualityAntialiasing|QtGui.QPainter.SmoothPixmapTransform)
+        self.graphicsView.setDragMode(QtGui.QGraphicsView.ScrollHandDrag)
+        self.graphicsView.setObjectName("graphicsView")
+        self.gridLayout.addWidget(self.graphicsView, 0, 0, 1, 1)
         MainWindow.setCentralWidget(self.centralwidget)
         self.toolBar = QtGui.QToolBar(MainWindow)
         palette = QtGui.QPalette()

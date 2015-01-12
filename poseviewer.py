@@ -13,17 +13,14 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setupUi(self)
+
         self.imageOptions = ImageOptions()
+        self.drawImage = DrawImage(self, self.graphicsView)
 
         self.slideshowTimer = QTimer()  # make a timer ready to be used
         self.timeElapsedTimer = TimeElapsedThread()
         self.totalTimeElapsed = QElapsedTimer()  # keep a track of the whole time spent in app
         self.totalTimeElapsed.start()
-
-        self.scroll_area = QScrollArea()
-        self.scroll_area.setWidget(self.imageLabel)
-        self.scroll_area.setWidgetResizable(True)  # fit to window
-        self.setCentralWidget(self.scroll_area)
 
         self.setActionOptions = SetActionOptions(self)
         self.setActionOptions.create_actions()  # SetActionOptions  --  creates actions not created in designer
@@ -57,7 +54,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.bars_displayed = True
 
         self.window_dimensions = self.geometry()  # remember the geometry for returning from fullscreen
-        self.imageLabel_dimensions = self.imageLabel.width(), self.imageLabel.height()  # scale the label from fullscreen
+        self.image_view_dimensions = self.graphicsView.width(), self.graphicsView.height()  # scale the label from fullscreen
         self.default_palette = self.palette()  # the default palette for returning from fullscreen
 
     def open_dir(self):
@@ -110,12 +107,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         Use the factor for zooming.
         """
         if self.all_files and self.step < len(self.all_files):
-            self.pix_image = QPixmap(self.all_files[self.step])
-            if size is not None:
-                self.pix_image = self.scale_image(width=size[0] * factor, height=size[1] * factor)
-            else:
-                self.pix_image = self.scale_image(factor=factor)
-            self.imageLabel.setPixmap(self.pix_image)
+            self.drawImage.draw_image(self.all_files[self.step])
             self.update_status_bar(self.all_files)
 
     def next_image(self):
@@ -199,7 +191,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
             icon.addPixmap(QPixmap(":/Icons/fullscreen.png"), QIcon.Normal, QIcon.Off)  # change icon
             self.actionFullscreen.setIcon(icon)
 
-            self.update_image(size=self.imageLabel_dimensions)
+            self.update_image(size=self.image_view_dimensions)
             self.showNormal()
             self.setGeometry(self.window_dimensions)
             self.setPalette(self.default_palette)  # set background to the default color
@@ -209,7 +201,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
             self.actionFullscreen.setIcon(icon)
 
             self.window_dimensions = self.geometry()  # save current window settings
-            self.imageLabel_dimensions = self.imageLabel.width(), self.imageLabel.height()
+            self.image_view_dimensions = self.graphicsView.width(), self.graphicsView.height()
             self.showFullScreen()
 
             palette = QPalette()
@@ -492,6 +484,40 @@ class ImageOptions():
     def set_flip_options(self):
         self.flipped = False
         self.flipped_upside_down = False
+
+
+class DrawImage():
+    def __init__(self, MainWindow, graphicsView):
+        self.MW = MainWindow
+        self.image_scene = QGraphicsScene()
+        self.image_view = graphicsView
+
+    def draw_image(self, image, size=None, factor=1):
+        """
+        Updates the imageLabel with the current image from self.step.
+        Scale the image to size, if included.
+        Use the factor for zooming.
+        """
+        self.image_scene.clear()  # empty the scene
+        pix_image = QPixmap(image)  # make pixmap
+        self.image_scene.addPixmap(pix_image)  # add pixmap to scene -> return QGraphicsPixmapItem
+        self.image_view.setScene(self.image_scene)  # apply scene to view
+        self.image_view.fitInView(self.image_scene.sceneRect(), Qt.KeepAspectRatio)  # scale image
+        self.image_view.show()  # show image
+
+    def scale_image(self, width=0, height=0, factor=1):
+        """
+        Scale the image so if it is too big resize it. Takes a pixmap as an argument.
+        Scale to width and height.
+        """
+        if width > 0 and height > 0:
+            return self.pix_image.scaled(width * factor, height * factor,
+                                         Qt.KeepAspectRatio,
+                                         Qt.SmoothTransformation)
+        else:
+            return self.pix_image.scaled(self.imageLabel.width() * factor,
+                                         self.imageLabel.height() * factor,
+                                         Qt.KeepAspectRatio, Qt.SmoothTransformation)
 
 
 if __name__ == '__main__':
