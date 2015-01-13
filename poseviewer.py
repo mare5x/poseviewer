@@ -491,33 +491,25 @@ class DrawImage():
         self.MW = MainWindow
         self.image_scene = QGraphicsScene()
         self.image_view = graphicsView
+        self.pix_item = QGraphicsPixmapItem()
+        self.pix_item.setTransformationMode(Qt.SmoothTransformation)  # make it smooooth
 
-    def draw_image(self, image, size=None, factor=1):
-        """
-        Updates the imageLabel with the current image from self.step.
-        Scale the image to size, if included.
-        Use the factor for zooming.
-        """
-        self.image_scene.clear()  # empty the scene
-        pix_image = QPixmap(image)  # make pixmap
-        self.image_scene.addPixmap(pix_image)  # add pixmap to scene -> return QGraphicsPixmapItem
+        self.image_scene.addItem(self.pix_item)  # add pixmap to scene
         self.image_view.setScene(self.image_scene)  # apply scene to view
-        self.image_view.fitInView(self.image_scene.sceneRect(), Qt.KeepAspectRatio)  # scale image
         self.image_view.show()  # show image
 
-    def scale_image(self, width=0, height=0, factor=1):
+    def draw_image(self, image, size=None, factor=1):
+        pix_image = QPixmap(image)  # make pixmap
+        self.pix_item.setPixmap(pix_image)
+        self.image_scene.setSceneRect(QRectF(0.0, 0.0, pix_image.width(), pix_image.height()))  # update the rect so it isn't retarded like by default
+        self.image_view.fitInView(self.image_scene.itemsBoundingRect(), Qt.KeepAspectRatio)  # scale image
+
+    def scale_image(self, pix_image, width=0, height=0, factor=1):
         """
         Scale the image so if it is too big resize it. Takes a pixmap as an argument.
         Scale to width and height.
         """
-        if width > 0 and height > 0:
-            return self.pix_image.scaled(width * factor, height * factor,
-                                         Qt.KeepAspectRatio,
-                                         Qt.SmoothTransformation)
-        else:
-            return self.pix_image.scaled(self.imageLabel.width() * factor,
-                                         self.imageLabel.height() * factor,
-                                         Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        return pix_image.scaled(width * factor, height * factor, Qt.KeepAspectRatio, Qt.SmoothTransformation)
 
 
 if __name__ == '__main__':

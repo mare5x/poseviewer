@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file '.\poseviewerMainGui.ui'
 #
-# Created: Mon Jan 12 20:43:23 2015
+# Created: Tue Jan 13 17:51:57 2015
 #      by: pyside-uic 0.2.15 running on PySide 1.2.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -22,9 +22,12 @@ class Ui_MainWindow(object):
         self.gridLayout.setObjectName("gridLayout")
         self.graphicsView = QtGui.QGraphicsView(self.centralwidget)
         self.graphicsView.setFrameShape(QtGui.QFrame.NoFrame)
-        self.graphicsView.setInteractive(True)
-        self.graphicsView.setRenderHints(QtGui.QPainter.HighQualityAntialiasing|QtGui.QPainter.SmoothPixmapTransform)
+        self.graphicsView.setInteractive(False)
+        self.graphicsView.setRenderHints(QtGui.QPainter.SmoothPixmapTransform)
         self.graphicsView.setDragMode(QtGui.QGraphicsView.ScrollHandDrag)
+        self.graphicsView.setResizeAnchor(QtGui.QGraphicsView.AnchorViewCenter)
+        self.graphicsView.setViewportUpdateMode(QtGui.QGraphicsView.FullViewportUpdate)
+        self.graphicsView.setRubberBandSelectionMode(QtCore.Qt.IntersectsItemShape)
         self.graphicsView.setObjectName("graphicsView")
         self.gridLayout.addWidget(self.graphicsView, 0, 0, 1, 1)
         MainWindow.setCentralWidget(self.centralwidget)
