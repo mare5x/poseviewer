@@ -9,13 +9,15 @@ import poseviewerMainGui
 
 
 class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
-
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setupUi(self)
 
-        self.imageOptions = ImageOptions()
-        self.drawImage = DrawImage(self, self.graphicsView)
+        self.setCentralWidget(self.graphicsView)  # fills the whole window
+        self.graphicsView.setContextMenuPolicy(Qt.ActionsContextMenu)  # without this the menu doesn't show on qgraphicsscene
+
+        self.imageOptions = ImageOptions(self)
+        self.drawImage = DrawImage(self, self.graphicsView, self)
 
         self.slideshowTimer = QTimer()  # make a timer ready to be used
         self.timeElapsedTimer = TimeElapsedThread()
@@ -54,7 +56,6 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.bars_displayed = True
 
         self.window_dimensions = self.geometry()  # remember the geometry for returning from fullscreen
-        self.image_view_dimensions = self.graphicsView.width(), self.graphicsView.height()  # scale the label from fullscreen
         self.default_palette = self.palette()  # the default palette for returning from fullscreen
 
     def open_dir(self):
@@ -100,14 +101,14 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
             self.start_slideshowTimer()
             self.is_playing = True
 
-    def update_image(self, size=None, factor=1):
+    def update_image(self, factor=1):
         """
         Updates the imageLabel with the current image from self.step.
         Scale the image to size, if included.
         Use the factor for zooming.
         """
         if self.all_files and self.step < len(self.all_files):
-            self.drawImage.draw_image(self.all_files[self.step])
+            self.drawImage.draw_image(self.all_files[self.step], factor=factor)
             self.update_status_bar(self.all_files)
 
     def next_image(self):
@@ -120,9 +121,12 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
             self.step = 0
 
         self.timeElapsedTimer.set_time_to_zero()
-        self.imageOptions.set_flip_options()
         self.update_timerLabel()
-        self.update_image()
+
+        if self.actionMirror.isChecked() or self.actionFlipUpDown.isChecked():
+            self.update_image()  # the graphicsview still stays rotated
+        else:
+            self.imageOptions.normal()  # update image and reset any transformations
 
         if self.sound and self.is_playing:  # if the slide show is playing and the sound is on (called by timer timeout)
             self.beep()
@@ -137,23 +141,12 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
             self.step = 0
 
         self.timeElapsedTimer.set_time_to_zero()  # reset timer back to 0
-        self.imageOptions.set_flip_options()
         self.update_timerLabel()  # immediately update
-        self.update_image()
 
-    def scale_image(self, width=0, height=0, factor=1):
-        """
-        Scale the image so if it is too big resize it. Takes a pixmap as an argument.
-        Scale to width and height.
-        """
-        if width > 0 and height > 0:
-            return self.pix_image.scaled(width * factor, height * factor,
-                                         Qt.KeepAspectRatio,
-                                         Qt.SmoothTransformation)
+        if self.actionMirror.isChecked() or self.actionFlipUpDown.isChecked():
+            self.update_image()  # the graphicsview still stays rotated
         else:
-            return self.pix_image.scaled(self.imageLabel.width() * factor,
-                                         self.imageLabel.height() * factor,
-                                         Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            self.imageOptions.normal()  # update image and reset any transformations
 
     def update_status_bar(self, image_list):
         """
@@ -191,7 +184,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
             icon.addPixmap(QPixmap(":/Icons/fullscreen.png"), QIcon.Normal, QIcon.Off)  # change icon
             self.actionFullscreen.setIcon(icon)
 
-            self.update_image(size=self.image_view_dimensions)
+            self.update_image()
             self.showNormal()
             self.setGeometry(self.window_dimensions)
             self.setPalette(self.default_palette)  # set background to the default color
@@ -201,7 +194,6 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
             self.actionFullscreen.setIcon(icon)
 
             self.window_dimensions = self.geometry()  # save current window settings
-            self.image_view_dimensions = self.graphicsView.width(), self.graphicsView.height()
             self.showFullScreen()
 
             palette = QPalette()
@@ -253,25 +245,6 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
             self.statusBar.show()
             self.bars_displayed = True
 
-    def flip_upside_down(self):
-        pix = self.imageOptions.flip_upside_down_pix(self.pix_image)
-        self.imageLabel.setPixmap(pix)
-
-    def flip(self):
-        pix = self.imageOptions.flip_pix(self.pix_image)
-        self.imageLabel.setPixmap(pix)
-
-    def rotate_right(self):
-        pix = self.imageOptions.rotate_right_pix(self.pix_image)
-        self.imageLabel.setPixmap(pix)
-
-    def rotate_left(self):
-        pix = self.imageOptions.rotate_left_pix(self.pix_image)
-        self.imageLabel.setPixmap(pix)
-
-    def normal_fit(self):
-        pass
-
     def start_slideshowTimer(self):
         self.slideshowTimer.start(self.slide_speed * 1000)  # ms to s
 
@@ -317,7 +290,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
                                                 hours, mins, secs))
 
     def contextMenuEvent(self, event):
-        menu = QMenu(self)
+        menu = QMenu()
         self.setActionOptions.add_to_context_menu(menu)
         menu.exec_(event.globalPos())  # show menu at mouse position
 
@@ -329,7 +302,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
     def resizeEvent(self, event):
         """
-        Resize the image as you resize the window.
+        Update the image as you resize the window.
         (Function override)
         """
         self.update_image()
@@ -380,6 +353,7 @@ class TimeElapsedThread(QThread):
 class SetActionOptions():
     def __init__(self, MainWindow):
         self.MW = MainWindow
+        self.imageOptions = ImageOptions(parent=self.MW)
 
     def add_actions(self):
         self.MW.addAction(self.MW.actionSpeed)
@@ -399,16 +373,18 @@ class SetActionOptions():
                 statusTip="Hide/show toolbar and statusbar", triggered=self.MW.toggle_bars)
 
         self.MW.actionFlipUpDown = QAction("Flip upside down", self.MW,
-                statusTip="Flip image upside down", triggered=self.MW.flip_upside_down,
-                enabled=False)
-        self.MW.actionFlip = QAction("Flip image", self.MW,
-                statusTip="Flip image", triggered=self.MW.flip, enabled=False)
+                statusTip="Flip image upside down", triggered=self.imageOptions.flip_upside_down,
+                enabled=False, checkable=True)
+        self.MW.actionMirror = QAction("Mirror image", self.MW,
+                statusTip="Mirror image", triggered=self.imageOptions.mirror, enabled=False, checkable=True)
         self.MW.actionRotateRight = QAction("Rotate image right", self.MW,
-                statusTip="Rotate image by 90° to the right", triggered=self.MW.rotate_right,
+                statusTip="Rotate image by 90° to the right", triggered=self.imageOptions.rotate_right,
                 enabled=False)
         self.MW.actionRotateLeft = QAction("Rotate image left", self.MW,
-                statusTip="Rotate image by 90° to the left", triggered=self.MW.rotate_left,
+                statusTip="Rotate image by 90° to the left", triggered=self.imageOptions.rotate_left,
                 enabled=False)
+        self.MW.actionNormal = QAction("Normal fit", self.MW,
+                statusTip="Normal fit the image", triggered=self.imageOptions.normal, enabled=False)
 
     def enable_actions(self):
         self.MW.actionPlay.setEnabled(True)
@@ -417,10 +393,11 @@ class SetActionOptions():
         self.MW.actionShuffle.setEnabled(True)
         self.MW.actionSound.setEnabled(True)
         self.MW.actionTimer.setEnabled(True)
-        self.MW.actionFlip.setEnabled(True)
+        self.MW.actionMirror.setEnabled(True)
         self.MW.actionFlipUpDown.setEnabled(True)
         self.MW.actionRotateRight.setEnabled(True)
         self.MW.actionRotateLeft.setEnabled(True)
+        self.MW.actionNormal.setEnabled(True)
 
     def add_to_context_menu(self, menu):
         menu.addAction(self.MW.actionOpen)
@@ -438,71 +415,67 @@ class SetActionOptions():
         menu.addAction(self.MW.actionTimer)
         menu.addSeparator()
 
-        menu.addAction(self.MW.actionStats)
+        menu.addAction(self.MW.actionMirror)
         menu.addAction(self.MW.actionFlipUpDown)
-        menu.addAction(self.MW.actionFlip)
         menu.addAction(self.MW.actionRotateRight)
         menu.addAction(self.MW.actionRotateLeft)
+        menu.addAction(self.MW.actionNormal)
+
+        menu.addSeparator()
+        menu.addAction(self.MW.actionStats)
         menu.addAction(self.MW.actionBars)
 
 
 class ImageOptions():
-    def __init__(self):
-        self.set_flip_options()
+    def __init__(self, parent=None):
+        self.MW = parent
 
-    def flip_upside_down_pix(self, pix_image):
-        if not self.flipped_upside_down:
-            transform = QTransform().rotate(180, Qt.XAxis)
-            self.flipped_upside_down = True
+    def flip_upside_down(self):
+        if self.MW.actionFlipUpDown.isChecked():
+            self.MW.graphicsView.rotate(180)  # set the transform -- no need to update image since the rect will stay the same - just flipped
         else:
-            transform = QTransform().rotate(0, Qt.XAxis)
-            self.flipped_upside_down = False
+            self.normal()
 
-        return pix_image.transformed(transform, mode=Qt.SmoothTransformation)
-
-    def flip_pix(self, pix_image):
-        if not self.flipped:
-            transform = QTransform().rotate(180, Qt.YAxis)  # flip
-            self.flipped = True  # change settings for next image
+    def mirror(self):
+        if self.MW.actionMirror.isChecked():
+            transform = QTransform().rotate(180, Qt.YAxis)  # mirror
+            self.MW.graphicsView.setTransform(transform)
+            self.MW.update_image()
         else:
-            transform = QTransform().rotate(0, Qt.YAxis)  # revert back to normal
-            self.flipped = False
+            self.normal()  # revert back to normal
 
-        return pix_image.transformed(transform, mode=Qt.SmoothTransformation)  # apply transform
+    def rotate_right(self):
+        self.MW.graphicsView.rotate(90)
+        self.MW.update_image()
 
-    def rotate_right_pix(self, pix_image):
-        transform = QTransform().rotate(90)
-        return pix_image.transformed(transform, mode=Qt.SmoothTransformation)
+    def rotate_left(self):
+        self.MW.graphicsView.rotate(-90)
+        self.MW.update_image()
 
-    def rotate_left_pix(self, pix_image):
-        transform = QTransform().rotate(270)
-        return pix_image.transformed(transform, mode=Qt.SmoothTransformation)
-
-    def normal_fit(self, pix_image):
-        pass
-
-    def set_flip_options(self):
-        self.flipped = False
-        self.flipped_upside_down = False
+    def normal(self):
+        self.MW.actionFlipUpDown.setChecked(False)
+        self.MW.actionMirror.setChecked(False)
+        self.MW.graphicsView.resetTransform()
+        self.MW.update_image()
 
 
-class DrawImage():
-    def __init__(self, MainWindow, graphicsView):
-        self.MW = MainWindow
-        self.image_scene = QGraphicsScene()
+class DrawImage(QGraphicsScene):
+    def __init__(self, MainWindow, graphicsView, parent=None):
+        super().__init__(parent)
+
         self.image_view = graphicsView
         self.pix_item = QGraphicsPixmapItem()
         self.pix_item.setTransformationMode(Qt.SmoothTransformation)  # make it smooooth
 
-        self.image_scene.addItem(self.pix_item)  # add pixmap to scene
-        self.image_view.setScene(self.image_scene)  # apply scene to view
+        self.addItem(self.pix_item)  # add pixmap to scene
+        self.image_view.setScene(self)  # apply scene to view
         self.image_view.show()  # show image
 
-    def draw_image(self, image, size=None, factor=1):
+    def draw_image(self, image, factor=1):
         pix_image = QPixmap(image)  # make pixmap
         self.pix_item.setPixmap(pix_image)
-        self.image_scene.setSceneRect(QRectF(0.0, 0.0, pix_image.width(), pix_image.height()))  # update the rect so it isn't retarded like by default
-        self.image_view.fitInView(self.image_scene.itemsBoundingRect(), Qt.KeepAspectRatio)  # scale image
+        self.setSceneRect(QRectF(0.0, 0.0, pix_image.width(), pix_image.height()))  # update the rect so it isn't retarded like by default
+        self.image_view.fitInView(self.itemsBoundingRect(), Qt.KeepAspectRatio)  # scale image
 
     def scale_image(self, pix_image, width=0, height=0, factor=1):
         """
