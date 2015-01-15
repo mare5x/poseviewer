@@ -13,18 +13,17 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         super().__init__(parent)
         self.setupUi(self)
 
-        self.setCentralWidget(self.graphicsView)  # fills the whole window
-        self.graphicsView.setContextMenuPolicy(Qt.ActionsContextMenu)  # without this the menu doesn't show on qgraphicsscene
+        self.drawImage = DrawImage(self)
+        self.imageOptions = ImageOptions(self, self.drawImage)
 
-        self.imageOptions = ImageOptions(self)
-        self.drawImage = DrawImage(self, self.graphicsView, self)
+        self.setCentralWidget(self.drawImage)  # fills the whole window
 
         self.slideshowTimer = QTimer()  # make a timer ready to be used
         self.timeElapsedTimer = TimeElapsedThread()
         self.totalTimeElapsed = QElapsedTimer()  # keep a track of the whole time spent in app
         self.totalTimeElapsed.start()
 
-        self.setActionOptions = SetActionOptions(self)
+        self.setActionOptions = SetActionOptions(self, self.drawImage)
         self.setActionOptions.create_actions()  # SetActionOptions  --  creates actions not created in designer
         self.setActionOptions.add_actions()  # SetActionOptions -- adds actions to MainWindow
 
@@ -52,6 +51,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.is_playing = False  # is the slideshow playing
         self.sound = True  # is the sound turned on
         self.slide_speed = 30
+        self.factor = 1
         self.timer_visible = False
         self.bars_displayed = True
 
@@ -107,8 +107,10 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         Scale the image to size, if included.
         Use the factor for zooming.
         """
+        self.factor *= factor  # alter factor level through wheel events
+
         if self.all_files and self.step < len(self.all_files):
-            self.drawImage.draw_image(self.all_files[self.step], factor=factor)
+            self.drawImage.draw_image(self.all_files[self.step], factor=self.factor)
             self.update_status_bar(self.all_files)
 
     def next_image(self):
@@ -122,11 +124,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
         self.timeElapsedTimer.set_time_to_zero()
         self.update_timerLabel()
-
-        if self.actionMirror.isChecked() or self.actionFlipUpDown.isChecked():
-            self.update_image()  # the graphicsview still stays rotated
-        else:
-            self.imageOptions.normal()  # update image and reset any transformations
+        self.prepare_image()
 
         if self.sound and self.is_playing:  # if the slide show is playing and the sound is on (called by timer timeout)
             self.beep()
@@ -142,7 +140,10 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
         self.timeElapsedTimer.set_time_to_zero()  # reset timer back to 0
         self.update_timerLabel()  # immediately update
+        self.prepare_image()
 
+    def prepare_image(self):
+        self.factor = 1  # reset zoom
         if self.actionMirror.isChecked() or self.actionFlipUpDown.isChecked():
             self.update_image()  # the graphicsview still stays rotated
         else:
@@ -188,6 +189,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
             self.showNormal()
             self.setGeometry(self.window_dimensions)
             self.setPalette(self.default_palette)  # set background to the default color
+            self.drawImage.setBackgroundBrush(QBrush(Qt.NoBrush))  # change graphicsview back to default
 
         else:  # go to fullscreen
             icon.addPixmap(QPixmap(":/Icons/closefullscreen.png"), QIcon.Normal, QIcon.Off)  # change icon
@@ -198,6 +200,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
             palette = QPalette()
             palette.setColor(self.backgroundRole(), Qt.black)  # set background to black
+            self.drawImage.setBackgroundBrush(QBrush(Qt.black))  # paint graphicview's background to black
             self.setPalette(palette)
             self.update_image()  # update the image to fit the fullscreen mode
 
@@ -251,12 +254,6 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
     def stop_slideshowTimer(self):
         self.slideshowTimer.stop()
 
-    def zoom_in(self):
-        self.update_image(factor=1.2)
-
-    def zoom_out(self):
-        self.update_image(factor=0.8)
-
     def beep(self):
         """
         Beep sound.
@@ -295,10 +292,11 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         menu.exec_(event.globalPos())  # show menu at mouse position
 
     def wheelEvent(self, event):
-        if event.delta() > 0:  # mouse wheel away = zoom in
-            self.zoom_in()
-        elif event.delta() < 0:
-            self.zoom_out()
+        if event.delta() < 0:  # mouse wheel away = zoom in
+            self.imageOptions.zoom_in()
+        else:
+            self.imageOptions.zoom_out()
+        self.drawImage.centerOn(event.globalPos())
 
     def resizeEvent(self, event):
         """
@@ -351,9 +349,9 @@ class TimeElapsedThread(QThread):
 
 
 class SetActionOptions():
-    def __init__(self, MainWindow):
+    def __init__(self, MainWindow, drawImage):
         self.MW = MainWindow
-        self.imageOptions = ImageOptions(parent=self.MW)
+        self.imageOptions = ImageOptions(MainWindow, drawImage)
 
     def add_actions(self):
         self.MW.addAction(self.MW.actionSpeed)
@@ -427,55 +425,77 @@ class SetActionOptions():
 
 
 class ImageOptions():
-    def __init__(self, parent=None):
-        self.MW = parent
+    def __init__(self, MainWindow, drawImage):
+        self.MW = MainWindow
+        self.drawImage = drawImage
+
+    def zoom_in(self):
+        self.MW.update_image(factor=1.2)
+
+    def zoom_out(self):
+        self.MW.update_image(factor=0.8)
 
     def flip_upside_down(self):
         if self.MW.actionFlipUpDown.isChecked():
-            self.MW.graphicsView.rotate(180)  # set the transform -- no need to update image since the rect will stay the same - just flipped
+            self.drawImage.rotate(180)  # set the transform -- no need to update image since the rect will stay the same - just flipped
         else:
             self.normal()
 
     def mirror(self):
         if self.MW.actionMirror.isChecked():
             transform = QTransform().rotate(180, Qt.YAxis)  # mirror
-            self.MW.graphicsView.setTransform(transform)
+            self.drawImage.setTransform(transform)
             self.MW.update_image()
         else:
             self.normal()  # revert back to normal
 
     def rotate_right(self):
-        self.MW.graphicsView.rotate(90)
+        self.drawImage.rotate(90)
         self.MW.update_image()
 
     def rotate_left(self):
-        self.MW.graphicsView.rotate(-90)
+        self.drawImage.rotate(-90)
         self.MW.update_image()
 
     def normal(self):
         self.MW.actionFlipUpDown.setChecked(False)
         self.MW.actionMirror.setChecked(False)
-        self.MW.graphicsView.resetTransform()
+        self.drawImage.resetTransform()
         self.MW.update_image()
 
 
-class DrawImage(QGraphicsScene):
-    def __init__(self, MainWindow, graphicsView, parent=None):
+class DrawImage(QGraphicsView):
+    #### TODO: ZOOMING ON MOUSE POS
+    def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.image_view = graphicsView
+        self.setFrameShape(QFrame.NoFrame)  # PySide.QtGui.QFrame draws nothing
+        self.setInteractive(False)
+        self.setRenderHints(QPainter.SmoothPixmapTransform)
+        self.setDragMode(QGraphicsView.ScrollHandDrag)
+        self.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
+        self.setRubberBandSelectionMode(Qt.IntersectsItemShape)
+
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)  # disable scroll bars - drag with mouse
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setContextMenuPolicy(Qt.ActionsContextMenu)  # without this the contextmenu doesn't show on qgraphicsscene
+
+        self.image_scene = QGraphicsScene()
         self.pix_item = QGraphicsPixmapItem()
         self.pix_item.setTransformationMode(Qt.SmoothTransformation)  # make it smooooth
 
-        self.addItem(self.pix_item)  # add pixmap to scene
-        self.image_view.setScene(self)  # apply scene to view
-        self.image_view.show()  # show image
+        self.image_scene.addItem(self.pix_item)  # add pixmap to scene
+        self.setScene(self.image_scene)  # apply scene to view
+        self.show()  # show image
 
     def draw_image(self, image, factor=1):
         pix_image = QPixmap(image)  # make pixmap
         self.pix_item.setPixmap(pix_image)
         self.setSceneRect(QRectF(0.0, 0.0, pix_image.width(), pix_image.height()))  # update the rect so it isn't retarded like by default
-        self.image_view.fitInView(self.itemsBoundingRect(), Qt.KeepAspectRatio)  # scale image
+        if factor == 1:
+            self.fitInView(self.image_scene.itemsBoundingRect(), Qt.KeepAspectRatio)  # scale image
+        else:
+            self.fitInView(0.0, 0.0, pix_image.width() * factor, pix_image.height() * factor, Qt.KeepAspectRatio)
 
     def scale_image(self, pix_image, width=0, height=0, factor=1):
         """
@@ -483,6 +503,9 @@ class DrawImage(QGraphicsScene):
         Scale to width and height.
         """
         return pix_image.scaled(width * factor, height * factor, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+
+    def wheelEvent(self, event):
+        event.ignore()  # ignore the event on graphicsview -- don't scroll, only zoom
 
 
 if __name__ == '__main__':
