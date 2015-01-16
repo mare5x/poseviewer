@@ -291,13 +291,6 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.setActionOptions.add_to_context_menu(menu)
         menu.exec_(event.globalPos())  # show menu at mouse position
 
-    def wheelEvent(self, event):
-        if event.delta() < 0:  # mouse wheel away = zoom in
-            self.imageOptions.zoom_in()
-        else:
-            self.imageOptions.zoom_out()
-        self.drawImage.centerOn(event.globalPos())
-
     def resizeEvent(self, event):
         """
         Update the image as you resize the window.
@@ -429,12 +422,6 @@ class ImageOptions():
         self.MW = MainWindow
         self.drawImage = drawImage
 
-    def zoom_in(self):
-        self.MW.update_image(factor=1.2)
-
-    def zoom_out(self):
-        self.MW.update_image(factor=0.8)
-
     def flip_upside_down(self):
         if self.MW.actionFlipUpDown.isChecked():
             self.drawImage.rotate(180)  # set the transform -- no need to update image since the rect will stay the same - just flipped
@@ -480,32 +467,27 @@ class DrawImage(QGraphicsView):
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setContextMenuPolicy(Qt.ActionsContextMenu)  # without this the contextmenu doesn't show on qgraphicsscene
 
-        self.image_scene = QGraphicsScene()
+        self.imageScene = QGraphicsScene()
         self.pix_item = QGraphicsPixmapItem()
         self.pix_item.setTransformationMode(Qt.SmoothTransformation)  # make it smooooth
 
-        self.image_scene.addItem(self.pix_item)  # add pixmap to scene
-        self.setScene(self.image_scene)  # apply scene to view
+        self.imageScene.addItem(self.pix_item)  # add pixmap to scene
+        self.setScene(self.imageScene)  # apply scene to view
         self.show()  # show image
 
     def draw_image(self, image, factor=1):
         pix_image = QPixmap(image)  # make pixmap
         self.pix_item.setPixmap(pix_image)
-        self.setSceneRect(QRectF(0.0, 0.0, pix_image.width(), pix_image.height()))  # update the rect so it isn't retarded like by default
-        if factor == 1:
-            self.fitInView(self.image_scene.itemsBoundingRect(), Qt.KeepAspectRatio)  # scale image
-        else:
-            self.fitInView(0.0, 0.0, pix_image.width() * factor, pix_image.height() * factor, Qt.KeepAspectRatio)
-
-    def scale_image(self, pix_image, width=0, height=0, factor=1):
-        """
-        Scale the image so if it is too big resize it. Takes a pixmap as an argument.
-        Scale to width and height.
-        """
-        return pix_image.scaled(width * factor, height * factor, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        self.setSceneRect(QRectF(0.0, 0.0, pix_image.width(), pix_image.height()))  # update the rect so it isn't retarded like by default -- center image
+        self.fitInView(self.sceneRect(), Qt.KeepAspectRatio)
 
     def wheelEvent(self, event):
-        event.ignore()  # ignore the event on graphicsview -- don't scroll, only zoom
+        if event.delta() > 0:  # mouse wheel away = zoom in
+            self.scale(1.2, 1.2)
+        else:
+            self.scale(0.8, 0.8)
+        pos = self.mapToScene(event.pos())  # translate pos to scene pos
+        self.centerOn(pos)
 
 
 if __name__ == '__main__':

@@ -3,3 +3,5 @@ PySlideshow-master/
 
 # ignore
 __pycache__/
+
+venv/
