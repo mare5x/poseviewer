@@ -169,6 +169,9 @@
    <property name="toolTip">
     <string>Shuffle images</string>
    </property>
+   <property name="shortcut">
+    <string>F5</string>
+   </property>
   </action>
   <action name="actionSound">
    <property name="enabled">

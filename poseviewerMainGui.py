@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file '.\poseviewerMainGui.ui'
 #
-# Created: Thu Jan 15 16:41:22 2015
+# Created: Sat Mar 28 19:19:36 2015
 #      by: pyside-uic 0.2.15 running on PySide 1.2.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -124,6 +124,7 @@ class Ui_MainWindow(object):
         self.actionNext.setShortcut(QtGui.QApplication.translate("MainWindow", "Right", None, QtGui.QApplication.UnicodeUTF8))
         self.actionShuffle.setText(QtGui.QApplication.translate("MainWindow", "Shuffle images", None, QtGui.QApplication.UnicodeUTF8))
         self.actionShuffle.setToolTip(QtGui.QApplication.translate("MainWindow", "Shuffle images", None, QtGui.QApplication.UnicodeUTF8))
+        self.actionShuffle.setShortcut(QtGui.QApplication.translate("MainWindow", "F5", None, QtGui.QApplication.UnicodeUTF8))
         self.actionSound.setText(QtGui.QApplication.translate("MainWindow", "Toggle sound effects during slideshow.", None, QtGui.QApplication.UnicodeUTF8))
         self.actionSound.setToolTip(QtGui.QApplication.translate("MainWindow", "Toggle sound effects during slideshow.", None, QtGui.QApplication.UnicodeUTF8))
         self.actionTimer.setText(QtGui.QApplication.translate("MainWindow", "Toggle timer display", None, QtGui.QApplication.UnicodeUTF8))

@@ -168,10 +168,10 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
     def shuffle_list(self):
         """
         Shuffle the current list of images. Also initialize the settings again.
-        Show a warning, if the user tries to click to early.
         """
         self.step = 0
         self.all_files = random.sample(self.all_files, len(self.all_files))  # create a shuffled new list
+        self.next_image()
 
     def toggle_fullscreen(self):
         """
@@ -254,7 +254,8 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
     def stop_slideshowTimer(self):
         self.slideshowTimer.stop()
 
-    def beep(self):
+    @staticmethod
+    def beep():
         """
         Beep sound.
         """
@@ -318,15 +319,11 @@ class TimeElapsedThread(QThread):
         self.exit = False  # for safe exiting  -  not stuck in while loop
 
     def run(self):
-        timer = QElapsedTimer()
-        timer.start()
-
         while not self.exit:
-            if timer.hasExpired(1000):  # 1 seconds expired
-                self.secs_elapsed += 1  # secs_elapsed instead of secs because secs is recalculated
-                self.set_time_elapsed()  # don't calculate from ms because we always restart the timer
-                self.secElapsed.emit()
-                timer.restart()
+            self.sleep(1)  # 1 seconds expired
+            self.secs_elapsed += 1  # secs_elapsed instead of secs because secs is recalculated
+            self.set_time_elapsed()  # don't calculate from ms because we always restart the timer
+            self.secElapsed.emit()
 
     def set_time_elapsed(self):
         """
