@@ -4,6 +4,7 @@ import sys
 import os
 import random
 import ctypes
+import subprocess
 
 import poseviewerMainGui
 
@@ -54,6 +55,8 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.factor = 1
         self.timer_visible = False
         self.bars_displayed = True
+        self.previous_shuffle = []
+        self.undo_shuffle_index = -1
 
         self.window_dimensions = self.geometry()  # remember the geometry for returning from fullscreen
         self.default_palette = self.palette()  # the default palette for returning from fullscreen
@@ -169,9 +172,24 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         """
         Shuffle the current list of images. Also initialize the settings again.
         """
+        if len(self.previous_shuffle) > 10:
+            self.previous_shuffle.pop(0)
+        self.previous_shuffle.append((self.all_files, self.step))
+        self.undo_shuffle_index = -1
         self.step = 0
         self.all_files = random.sample(self.all_files, len(self.all_files))  # create a shuffled new list
         self.next_image()
+
+    def undo_shuffle(self):
+        all_files, step = self.previous_shuffle[self.undo_shuffle_index]
+        self.all_files = all_files
+        self.step = step
+        self.prepare_image()
+        self.update_image()
+        self.undo_shuffle_index -= 1
+
+        if self.undo_shuffle_index < -9:
+            self.undo_shuffle_index = -8
 
     def toggle_fullscreen(self):
         """
@@ -248,6 +266,8 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
             self.statusBar.show()
             self.bars_displayed = True
 
+        self.update_image()
+
     def start_slideshowTimer(self):
         self.slideshowTimer.start(self.slide_speed * 1000)  # ms to s
 
@@ -286,6 +306,9 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         QMessageBox.information(self, 'Stats', 'Total time in app: {0:02.0f} hours '
                                                '{1:02.0f} minutes and {2:02.0f} seconds'.format(
                                                 hours, mins, secs))
+
+    def open_in_folder(self):
+        subprocess.Popen(r'explorer /select,{}'.format(self.all_files[self.step]))
 
     def contextMenuEvent(self, event):
         menu = QMenu()
@@ -353,6 +376,8 @@ class SetActionOptions():
         self.MW.addAction(self.MW.actionShuffle)
         self.MW.addAction(self.MW.actionSound)
         self.MW.addAction(self.MW.actionTimer)
+        self.MW.addAction(self.MW.actionOpenInFolder)
+        self.MW.addAction(self.MW.actionPreviousShuffle)
 
     def create_actions(self):
         self.MW.actionStats = QAction("Run time", self.MW,
@@ -373,6 +398,11 @@ class SetActionOptions():
                 enabled=False)
         self.MW.actionNormal = QAction("Normal fit", self.MW,
                 statusTip="Normal fit the image", triggered=self.imageOptions.normal, enabled=False)
+        self.MW.actionOpenInFolder = QAction("Open containing folder", self.MW,
+                statusTip="Open containing folder", triggered=self.MW.open_in_folder, enabled=False)
+        self.MW.actionPreviousShuffle = QAction("Undo shuffle", self.MW,
+                statusTip="Undo last shuffle", triggered=self.MW.undo_shuffle, enabled=False,
+                shortcut=QKeySequence.fromString("Shift+F5"))
 
     def enable_actions(self):
         self.MW.actionPlay.setEnabled(True)
@@ -386,9 +416,12 @@ class SetActionOptions():
         self.MW.actionRotateRight.setEnabled(True)
         self.MW.actionRotateLeft.setEnabled(True)
         self.MW.actionNormal.setEnabled(True)
+        self.MW.actionOpenInFolder.setEnabled(True)
+        self.MW.actionPreviousShuffle.setEnabled(True)
 
     def add_to_context_menu(self, menu):
         menu.addAction(self.MW.actionOpen)
+        menu.addAction(self.MW.actionOpenInFolder)
         menu.addAction(self.MW.actionSpeed)
         menu.addAction(self.MW.actionFullscreen)
         menu.addSeparator()
@@ -399,6 +432,7 @@ class SetActionOptions():
         menu.addSeparator()
 
         menu.addAction(self.MW.actionShuffle)
+        menu.addAction(self.MW.actionPreviousShuffle)
         menu.addAction(self.MW.actionSound)
         menu.addAction(self.MW.actionTimer)
         menu.addSeparator()
