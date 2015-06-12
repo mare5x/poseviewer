@@ -5,8 +5,19 @@ import os
 import random
 import ctypes
 import subprocess
+import shelve
 
 import poseviewerMainGui
+
+
+def get_shelf(key):
+    with shelve.open('settings') as db:
+        return db[key]
+
+
+def set_shelf(key, item):
+    with shelve.open('settings') as db:
+        db[key] = item
 
 
 class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
@@ -15,7 +26,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.setupUi(self)
 
         self.drawImage = DrawImage(self)
-        self.imageOptions = ImageOptions(self, self.drawImage)
+        self.imageOptions = ImageOptions(self)
 
         self.setCentralWidget(self.drawImage)  # fills the whole window
 
@@ -24,16 +35,11 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.totalTimeElapsed = QElapsedTimer()  # keep a track of the whole time spent in app
         self.totalTimeElapsed.start()
 
-        self.setActionOptions = SetActionOptions(self, self.drawImage)
-        self.setActionOptions.create_actions()  # SetActionOptions  --  creates actions not created in designer
-        self.setActionOptions.add_actions()  # SetActionOptions -- adds actions to MainWindow
+        self.action_options = ActionOptions(self)
 
         self.timerLabel = QLabel()  # timer label
         self.timerLabel.setStyleSheet("font: 17pt; color: rgb(0, 180, 255)")  # set font size to 17 and color to blueish
         self.actionTimerLabel = self.toolBar.addWidget(self.timerLabel)  # add the timer label to the toolbar
-
-        self.dirs = ["."]  # the directory of the images, "." = default value
-        self.all_files = None  # a list
 
         self.actionOpen.triggered.connect(self.open_dir)
         self.actionPlay.triggered.connect(self.toggle_slideshow)  # show image and start the timer
@@ -48,6 +54,9 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.timeElapsedTimer.secElapsed.connect(self.update_timerLabel)  # update the timer label every second
         self.slideshowTimer.timeout.connect(self.next_image)  # every slide_speed seconds show image
 
+        self.resizeTimer = QTimer(singleShot=True)
+        self.resizeTimer.timeout.connect(self.update_image)
+
         self.step = 0  # go through all files
         self.is_playing = False  # is the slideshow playing
         self.sound = True  # is the sound turned on
@@ -57,6 +66,20 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.bars_displayed = True
         self.previous_shuffle = []
         self.undo_shuffle_index = -1
+        self.current_image_path = "."
+        self.all_files = None  # a list
+        try:
+            self.starred_images = get_shelf('stars')
+            self.update_starred_images_menu()
+        except KeyError:
+            self.starred_images = set()
+
+        try:
+            self.dirs = get_shelf('dirs')
+        except KeyError:
+            self.dirs = ["."]  # the directory of the images, "." = default value
+
+        self.action_options.enable_actions_for(self.action_options.path_actions)
 
         self.window_dimensions = self.geometry()  # remember the geometry for returning from fullscreen
         self.default_palette = self.palette()  # the default palette for returning from fullscreen
@@ -66,22 +89,20 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         Append the image directory to self.dirs
         """
         self.dirs.append(QFileDialog.getExistingDirectory(self, "Open directory", dir=self.dirs[-1]))
+        self.dirs.pop(0)
+        set_shelf('dirs', self.dirs)
         if not self.dirs[-1] == '':  # '' is not a valid path
             self.all_files_dir()
 
     def all_files_dir(self):
         """
-        Appends dir + file
-        Append all files in the directory to self.all_files if the file is a file.
-        Also use os.path.join to correctly connect the dir with the file.
-        Don't append in case we change the working dir. - Make new all files list.
-        Update the display with an image. Enable the buttons.
+        Constructs all_files and enables all actions.
         """
         self.all_files = [os.path.join(self.dirs[-1], f) for f in os.listdir(
                         self.dirs[-1]) if os.path.isfile(os.path.join(self.dirs[-1], f))]
-        self.update_image()
+        self.next_image()
 
-        self.setActionOptions.enable_actions()  # enable the actions
+        self.action_options.enable_all_actions()  # enable the actions
 
     def toggle_slideshow(self):
         """
@@ -104,7 +125,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
             self.start_slideshowTimer()
             self.is_playing = True
 
-    def update_image(self, factor=1):
+    def update_image(self, factor=1, image_path=None):
         """
         Updates the imageLabel with the current image from self.step.
         Scale the image to size, if included.
@@ -112,9 +133,20 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         """
         self.factor *= factor  # alter factor level through wheel events
 
-        if self.all_files and self.step < len(self.all_files):
-            self.drawImage.draw_image(self.all_files[self.step], factor=self.factor)
-            self.update_status_bar(self.all_files)
+        if image_path:
+            self.drawImage.draw_image(image_path, factor=self.factor)
+            self.current_image_path = image_path
+        elif self.all_files and self.step < len(self.all_files) or self.current_image_path:
+            self.drawImage.draw_image(self.current_image_path, factor=self.factor)
+            self.update_status_bar(self.current_image_path)
+
+    def prepare_image(self):
+        self.current_image_path = self.get_current_image_path()
+        self.factor = 1  # reset zoom
+        if self.actionMirror.isChecked() or self.actionFlipUpDown.isChecked():
+            self.update_image()  # the graphicsview still stays rotated
+        else:
+            self.imageOptions.normal()  # update image and reset any transformations
 
     def next_image(self):
         """
@@ -145,18 +177,11 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.update_timerLabel()  # immediately update
         self.prepare_image()
 
-    def prepare_image(self):
-        self.factor = 1  # reset zoom
-        if self.actionMirror.isChecked() or self.actionFlipUpDown.isChecked():
-            self.update_image()  # the graphicsview still stays rotated
-        else:
-            self.imageOptions.normal()  # update image and reset any transformations
-
-    def update_status_bar(self, image_list):
+    def update_status_bar(self, image_path):
         """
-        Update the status bar with the image title and file location.
+        Update the status bar with the image path.
         """
-        self.statusBar.showMessage("{0}".format(image_list[self.step], self.step, len(image_list)))
+        self.statusBar.showMessage("{0}".format(image_path))
 
     def set_slide_speed(self):
         """
@@ -174,19 +199,20 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         """
         if len(self.previous_shuffle) > 10:
             self.previous_shuffle.pop(0)
-        self.previous_shuffle.append((self.all_files, self.step))
+        self.previous_shuffle.append(self.get_current_state())
         self.undo_shuffle_index = -1
         self.step = 0
         self.all_files = random.sample(self.all_files, len(self.all_files))  # create a shuffled new list
         self.next_image()
 
     def undo_shuffle(self):
-        all_files, step = self.previous_shuffle[self.undo_shuffle_index]
-        self.all_files = all_files
-        self.step = step
-        self.prepare_image()
-        self.update_image()
-        self.undo_shuffle_index -= 1
+        if abs(self.undo_shuffle_index) <= len(self.previous_shuffle):
+            all_files, step = self.previous_shuffle[self.undo_shuffle_index]
+            self.all_files = all_files
+            self.step = step
+            self.prepare_image()
+            self.update_image()
+            self.undo_shuffle_index -= 1
 
         if self.undo_shuffle_index < -9:
             self.undo_shuffle_index = -8
@@ -308,23 +334,213 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
                                                 hours, mins, secs))
 
     def open_in_folder(self):
-        subprocess.Popen(r'explorer /select,{}'.format(self.all_files[self.step]))
+        subprocess.Popen(r'explorer /select,{}'.format(self.current_image_path))
+
+    def star_image(self):
+        self.starred_images.add(self.current_image_path)
+        set_shelf('stars', self.starred_images)
+        self.update_starred_images_menu()
+
+    def update_starred_images_menu(self):
+        stars_menu = QMenu("Starred images")
+        for star in self.starred_images:
+            stars_menu.addAction(star)
+        self.action_options.stars_menu = stars_menu
+        return stars_menu
+
+    def get_current_state(self):
+        return self.all_files, self.step
+
+    def get_current_image_path(self):
+        return self.all_files[self.step]
+
+    def get_starred_image(self, action):
+        if self.action_options.image_actions.isEnabled():
+            self.action_options.enable_actions_for(self.action_options.image_actions)
+        self.update_image(image_path=action.text())
 
     def contextMenuEvent(self, event):
+        """Show a context menu on right click."""
         menu = QMenu()
-        self.setActionOptions.add_to_context_menu(menu)
+        self.action_options.add_to_context_menu(menu)
+        self.action_options.stars_menu.triggered.connect(self.get_starred_image)
         menu.exec_(event.globalPos())  # show menu at mouse position
 
     def resizeEvent(self, event):
         """
         Update the image as you resize the window.
-        (Function override)
         """
-        self.update_image()
+        self.resizeTimer.start(500)
 
     def closeEvent(self, event):
         self.timeElapsedTimer.exit = True  # safe thread exit
         event.accept()  # close app
+
+
+class ActionOptions:
+    def __init__(self, parent):
+        self.mw = parent
+
+        self.stars_menu = QMenu("Starred images")
+        self.main_menu = QMenu()
+
+        self.image_actions = QActionGroup(self.mw)
+        self.image_actions.setExclusive(False)
+
+        self.path_actions = QActionGroup(self.mw)
+        self.path_actions.addAction(self.mw.actionOpen)
+        self.path_actions.addAction(self.mw.actionSpeed)
+        self.path_actions.addAction(self.mw.actionFullscreen)
+
+        self.create_actions()
+        self.add_actions()
+
+    def add_actions(self):
+        self.add_actions_to(self.path_actions, self.mw)
+
+        self.mw.addAction(self.mw.actionSpeed)
+        self.mw.addAction(self.mw.actionOpen)
+        self.mw.addAction(self.mw.actionFullscreen)
+        self.mw.addAction(self.mw.actionPrevious)
+        self.mw.addAction(self.mw.actionPlay)
+        self.mw.addAction(self.mw.actionNext)
+        self.mw.addAction(self.mw.actionShuffle)
+        self.mw.addAction(self.mw.actionSound)
+        self.mw.addAction(self.mw.actionTimer)
+        self.mw.addAction(self.mw.actionPreviousShuffle)
+        self.mw.addAction(self.mw.actionStar)
+
+    def create_actions(self):
+        self.mw.actionStats = QAction("Run time", self.mw,
+                    statusTip="Show app run time", triggered=self.mw.show_stats)
+        self.mw.actionBars = QAction("Hide/Show toolbar and statusbar", self.mw,
+                    statusTip="Hide/show toolbar and statusbar", triggered=self.mw.toggle_bars)
+
+        # ------- image_actions -------
+        self.mw.actionFlipUpDown = self.create_action("Flip upside down", self.mw,
+                    statusTip="Flip image upside down", triggered=self.mw.imageOptions.flip_upside_down,
+                    enabled=False, checkable=True, action_group=self.image_actions)
+        self.mw.actionMirror = self.create_action("Mirror image", self.mw,
+                    statusTip="Mirror image", triggered=self.mw.imageOptions.mirror, enabled=False, checkable=True,
+                    action_group=self.image_actions)
+        self.mw.actionRotateRight = self.create_action("Rotate image right", self.mw,
+                    statusTip="Rotate image by 90° to the right", triggered=self.mw.imageOptions.rotate_right,
+                    enabled=False, action_group=self.image_actions)
+        self.mw.actionRotateLeft = self.create_action("Rotate image left", self.mw,
+                    statusTip="Rotate image by 90° to the left", triggered=self.mw.imageOptions.rotate_left,
+                    enabled=False, action_group=self.image_actions)
+        self.mw.actionNormal = self.create_action("Normal fit", self.mw,
+                    statusTip="Normal fit the image", triggered=self.mw.imageOptions.normal, enabled=False,
+                    action_group=self.image_actions)
+        # ------- image_actions -------
+
+        self.mw.actionOpenInFolder = self.create_action("Open containing folder", self.mw,
+                    statusTip="Open containing folder", triggered=self.mw.open_in_folder, enabled=False,
+                    action_group=self.path_actions)
+        self.mw.actionPreviousShuffle = QAction("Undo shuffle", self.mw,
+                    statusTip="Undo last shuffle", triggered=self.mw.undo_shuffle, enabled=False,
+                    shortcut=QKeySequence.fromString("Shift+F5"))
+        self.mw.actionStar = QAction("Star this image", self.mw, statusTip="Star this image",
+                    triggered=self.mw.star_image, enabled=False, shortcut=QKeySequence.fromString("Ctrl+D"))
+
+    def create_action(self, *args, **kwargs):
+        """Construct an action and add it to an action_group."""
+        action_group = kwargs.pop('action_group', None)
+        act = QAction(*args, **kwargs)
+        if action_group:
+            act.setActionGroup(action_group)
+
+        return act
+
+    def enable_actions_for(self, actions):
+        for action in actions.actions():
+            action.setEnabled(True)
+
+    def add_actions_to(self, actions, obj):
+        for action in actions.actions():
+            obj.addAction(action)
+
+    def enable_all_actions(self):
+        self.mw.actionPlay.setEnabled(True)
+        self.mw.actionNext.setEnabled(True)
+        self.mw.actionPrevious.setEnabled(True)
+
+        self.mw.actionShuffle.setEnabled(True)
+        self.mw.actionPreviousShuffle.setEnabled(True)
+
+        self.mw.actionSound.setEnabled(True)
+        self.mw.actionTimer.setEnabled(True)
+
+        self.enable_actions_for(self.image_actions)
+
+        self.mw.actionOpenInFolder.setEnabled(True)
+        self.mw.actionStar.setEnabled(True)
+
+    def add_to_context_menu(self, menu):
+        menu.addAction(self.mw.actionOpen)
+        menu.addAction(self.mw.actionOpenInFolder)
+        menu.addAction(self.mw.actionSpeed)
+        menu.addAction(self.mw.actionFullscreen)
+        menu.addSeparator()
+
+        menu.addAction(self.mw.actionPrevious)
+        menu.addAction(self.mw.actionPlay)
+        menu.addAction(self.mw.actionNext)
+        menu.addSeparator()
+
+        menu.addAction(self.mw.actionShuffle)
+        menu.addAction(self.mw.actionPreviousShuffle)
+        menu.addAction(self.mw.actionSound)
+        menu.addAction(self.mw.actionTimer)
+        menu.addSeparator()
+
+        self.add_actions_to(self.image_actions, menu)
+
+        menu.addSeparator()
+        menu.addAction(self.mw.actionStats)
+        menu.addAction(self.mw.actionBars)
+
+        menu.addSeparator()
+        menu.addAction(self.mw.actionStar)
+        stars_menu = menu.addMenu(self.stars_menu)
+
+        self.main_menu = menu
+
+    def get_menu(self):
+        return self.main_menu
+
+
+class ImageOptions:
+    def __init__(self, parent):
+        self.mw = parent
+
+    def flip_upside_down(self):
+        if self.mw.actionFlipUpDown.isChecked():
+            self.mw.drawImage.rotate(180)  # set the transform -- no need to update image since the rect will stay the same - just flipped
+        else:
+            self.normal()
+
+    def mirror(self):
+        if self.mw.actionMirror.isChecked():
+            transform = QTransform().rotate(180, Qt.YAxis)  # mirror
+            self.mw.drawImage.setTransform(transform)
+            self.mw.update_image()
+        else:
+            self.normal()  # revert back to normal
+
+    def rotate_right(self):
+        self.mw.drawImage.rotate(90)
+        self.mw.update_image()
+
+    def rotate_left(self):
+        self.mw.drawImage.rotate(-90)
+        self.mw.update_image()
+
+    def normal(self):
+        self.mw.actionFlipUpDown.setChecked(False)
+        self.mw.actionMirror.setChecked(False)
+        self.mw.drawImage.resetTransform()
+        self.mw.update_image()
 
 
 class TimeElapsedThread(QThread):
@@ -359,127 +575,6 @@ class TimeElapsedThread(QThread):
 
     def set_time_to_zero(self):
         self.secs_elapsed, self.secs, self.mins, self.hours = 0, 0, 0, 0
-
-
-class SetActionOptions():
-    def __init__(self, MainWindow, drawImage):
-        self.MW = MainWindow
-        self.imageOptions = ImageOptions(MainWindow, drawImage)
-
-    def add_actions(self):
-        self.MW.addAction(self.MW.actionSpeed)
-        self.MW.addAction(self.MW.actionOpen)
-        self.MW.addAction(self.MW.actionFullscreen)
-        self.MW.addAction(self.MW.actionPrevious)
-        self.MW.addAction(self.MW.actionPlay)
-        self.MW.addAction(self.MW.actionNext)
-        self.MW.addAction(self.MW.actionShuffle)
-        self.MW.addAction(self.MW.actionSound)
-        self.MW.addAction(self.MW.actionTimer)
-        self.MW.addAction(self.MW.actionOpenInFolder)
-        self.MW.addAction(self.MW.actionPreviousShuffle)
-
-    def create_actions(self):
-        self.MW.actionStats = QAction("Run time", self.MW,
-                statusTip="Show app run time", triggered=self.MW.show_stats)
-        self.MW.actionBars = QAction("Hide/Show toolbar and statusbar", self.MW,
-                statusTip="Hide/show toolbar and statusbar", triggered=self.MW.toggle_bars)
-
-        self.MW.actionFlipUpDown = QAction("Flip upside down", self.MW,
-                statusTip="Flip image upside down", triggered=self.imageOptions.flip_upside_down,
-                enabled=False, checkable=True)
-        self.MW.actionMirror = QAction("Mirror image", self.MW,
-                statusTip="Mirror image", triggered=self.imageOptions.mirror, enabled=False, checkable=True)
-        self.MW.actionRotateRight = QAction("Rotate image right", self.MW,
-                statusTip="Rotate image by 90° to the right", triggered=self.imageOptions.rotate_right,
-                enabled=False)
-        self.MW.actionRotateLeft = QAction("Rotate image left", self.MW,
-                statusTip="Rotate image by 90° to the left", triggered=self.imageOptions.rotate_left,
-                enabled=False)
-        self.MW.actionNormal = QAction("Normal fit", self.MW,
-                statusTip="Normal fit the image", triggered=self.imageOptions.normal, enabled=False)
-        self.MW.actionOpenInFolder = QAction("Open containing folder", self.MW,
-                statusTip="Open containing folder", triggered=self.MW.open_in_folder, enabled=False)
-        self.MW.actionPreviousShuffle = QAction("Undo shuffle", self.MW,
-                statusTip="Undo last shuffle", triggered=self.MW.undo_shuffle, enabled=False,
-                shortcut=QKeySequence.fromString("Shift+F5"))
-
-    def enable_actions(self):
-        self.MW.actionPlay.setEnabled(True)
-        self.MW.actionNext.setEnabled(True)
-        self.MW.actionPrevious.setEnabled(True)
-        self.MW.actionShuffle.setEnabled(True)
-        self.MW.actionSound.setEnabled(True)
-        self.MW.actionTimer.setEnabled(True)
-        self.MW.actionMirror.setEnabled(True)
-        self.MW.actionFlipUpDown.setEnabled(True)
-        self.MW.actionRotateRight.setEnabled(True)
-        self.MW.actionRotateLeft.setEnabled(True)
-        self.MW.actionNormal.setEnabled(True)
-        self.MW.actionOpenInFolder.setEnabled(True)
-        self.MW.actionPreviousShuffle.setEnabled(True)
-
-    def add_to_context_menu(self, menu):
-        menu.addAction(self.MW.actionOpen)
-        menu.addAction(self.MW.actionOpenInFolder)
-        menu.addAction(self.MW.actionSpeed)
-        menu.addAction(self.MW.actionFullscreen)
-        menu.addSeparator()
-
-        menu.addAction(self.MW.actionPrevious)
-        menu.addAction(self.MW.actionPlay)
-        menu.addAction(self.MW.actionNext)
-        menu.addSeparator()
-
-        menu.addAction(self.MW.actionShuffle)
-        menu.addAction(self.MW.actionPreviousShuffle)
-        menu.addAction(self.MW.actionSound)
-        menu.addAction(self.MW.actionTimer)
-        menu.addSeparator()
-
-        menu.addAction(self.MW.actionMirror)
-        menu.addAction(self.MW.actionFlipUpDown)
-        menu.addAction(self.MW.actionRotateRight)
-        menu.addAction(self.MW.actionRotateLeft)
-        menu.addAction(self.MW.actionNormal)
-
-        menu.addSeparator()
-        menu.addAction(self.MW.actionStats)
-        menu.addAction(self.MW.actionBars)
-
-
-class ImageOptions():
-    def __init__(self, MainWindow, drawImage):
-        self.MW = MainWindow
-        self.drawImage = drawImage
-
-    def flip_upside_down(self):
-        if self.MW.actionFlipUpDown.isChecked():
-            self.drawImage.rotate(180)  # set the transform -- no need to update image since the rect will stay the same - just flipped
-        else:
-            self.normal()
-
-    def mirror(self):
-        if self.MW.actionMirror.isChecked():
-            transform = QTransform().rotate(180, Qt.YAxis)  # mirror
-            self.drawImage.setTransform(transform)
-            self.MW.update_image()
-        else:
-            self.normal()  # revert back to normal
-
-    def rotate_right(self):
-        self.drawImage.rotate(90)
-        self.MW.update_image()
-
-    def rotate_left(self):
-        self.drawImage.rotate(-90)
-        self.MW.update_image()
-
-    def normal(self):
-        self.MW.actionFlipUpDown.setChecked(False)
-        self.MW.actionMirror.setChecked(False)
-        self.drawImage.resetTransform()
-        self.MW.update_image()
 
 
 class DrawImage(QGraphicsView):
