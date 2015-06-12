@@ -72,7 +72,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
             self.starred_images = get_shelf('stars')
             self.update_starred_images_menu()
         except KeyError:
-            self.starred_images = set()
+            self.starred_images = []
 
         try:
             self.dirs = get_shelf('dirs')
@@ -302,16 +302,10 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
     @staticmethod
     def beep():
-        """
-        Beep sound.
-        """
         beep = QSound("beep.wav")
         beep.play()
 
     def update_timerLabel(self):
-        """
-        Update the timerLabel's contents.
-        """
         if self.timer_visible:
             self.timerLabel.setText("{0:02.0f}:{1:02.0f}:{2:02.0f}".format(
                                     self.timeElapsedTimer.hours,
@@ -319,10 +313,6 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
                                     self.timeElapsedTimer.secs))  # no remainder shown
 
     def show_stats(self):
-        """
-        Show stats (app run time).
-        Ran with CTRL+L
-        """
         # divmod = divide and modulo -- divmod(1200 / 1000)  =  (1, 200)
         # [0] = division, [1] = remainder(modulo)
         secs, ms = divmod(self.totalTimeElapsed.elapsed(), 1000)  # ms to s
@@ -337,27 +327,42 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         subprocess.Popen(r'explorer /select,{}'.format(self.current_image_path))
 
     def star_image(self):
-        self.starred_images.add(self.current_image_path)
+        self.starred_images.append(self.current_image_path)
         set_shelf('stars', self.starred_images)
         self.update_starred_images_menu()
 
     def update_starred_images_menu(self):
         stars_menu = QMenu("Starred images")
         for star in self.starred_images:
-            stars_menu.addAction(star)
+            each_star_menu = QMenu(star)
+            show_act = QAction("Show", each_star_menu)
+            show_act.setData(star)
+            each_star_menu.addAction(show_act)
+            unstar_act = QAction("Unstar", each_star_menu)
+            unstar_act.setData(star)
+            each_star_menu.addAction(unstar_act)
+            stars_menu.addMenu(each_star_menu)
         self.action_options.stars_menu = stars_menu
         return stars_menu
+
+    def get_starred_image(self, action):
+        self.action_options.stars_menu.triggered.disconnect(self.get_starred_image)
+        if self.action_options.image_actions.isEnabled():
+            self.action_options.enable_actions_for(self.action_options.image_actions)
+
+        if action.text() == "Show":
+            self.update_image(image_path=action.data())
+        elif action.text() == "Unstar":
+            self.starred_images.remove(action.data())
+            self.update_starred_images_menu()
+
+        print(self.starred_images)
 
     def get_current_state(self):
         return self.all_files, self.step
 
     def get_current_image_path(self):
         return self.all_files[self.step]
-
-    def get_starred_image(self, action):
-        if self.action_options.image_actions.isEnabled():
-            self.action_options.enable_actions_for(self.action_options.image_actions)
-        self.update_image(image_path=action.text())
 
     def contextMenuEvent(self, event):
         """Show a context menu on right click."""
