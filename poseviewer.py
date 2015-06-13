@@ -1,5 +1,8 @@
+# coding: utf-8
+
 from PySide.QtCore import *
 from PySide.QtGui import *
+import scandir
 import sys
 import os
 import random
@@ -54,20 +57,16 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.timeElapsedTimer.secElapsed.connect(self.update_timerLabel)  # update the timer label every second
         self.slideshowTimer.timeout.connect(self.next_image)  # every slide_speed seconds show image
 
-        self.resizeTimer = QTimer(singleShot=True)
-        self.resizeTimer.timeout.connect(self.update_image)
-
         self.step = 0  # go through all files
         self.is_playing = False  # is the slideshow playing
         self.sound = True  # is the sound turned on
         self.slide_speed = 30
-        self.factor = 1
         self.timer_visible = False
         self.bars_displayed = True
         self.previous_shuffle = []
         self.undo_shuffle_index = -1
         self.current_image_path = "."
-        self.all_files = None  # a list
+        self.all_files = []
         try:
             self.starred_images = get_shelf('stars')
             self.update_starred_images_menu()
@@ -98,8 +97,8 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         """
         Constructs all_files and enables all actions.
         """
-        self.all_files = [os.path.join(self.dirs[-1], f) for f in os.listdir(
-                        self.dirs[-1]) if os.path.isfile(os.path.join(self.dirs[-1], f))]
+        self.all_files = [os.path.join(self.dirs[-1], f) for f in scandir.listdir(
+            self.dirs[-1]) if os.path.isfile(os.path.join(self.dirs[-1], f))]
         self.next_image()
 
         self.action_options.enable_all_actions()  # enable the actions
@@ -125,24 +124,22 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
             self.start_slideshowTimer()
             self.is_playing = True
 
-    def update_image(self, factor=1, image_path=None):
+    def update_image(self, factor=1.2, image_path=None):
         """
-        Updates the imageLabel with the current image from self.step.
-        Scale the image to size, if included.
+        Update the graphicsview with image_path or current_image_path.
         Use the factor for zooming.
         """
-        self.factor *= factor  # alter factor level through wheel events
+        self.drawImage.zoom_factor = factor  # alter factor level through wheel events
 
         if image_path:
-            self.drawImage.draw_image(image_path, factor=self.factor)
+            self.drawImage.draw_image(image_path)
             self.current_image_path = image_path
         elif self.all_files and self.step < len(self.all_files) or self.current_image_path:
-            self.drawImage.draw_image(self.current_image_path, factor=self.factor)
+            self.drawImage.draw_image(self.current_image_path)
             self.update_status_bar(self.current_image_path)
 
     def prepare_image(self):
         self.current_image_path = self.get_current_image_path()
-        self.factor = 1  # reset zoom
         if self.actionMirror.isChecked() or self.actionFlipUpDown.isChecked():
             self.update_image()  # the graphicsview still stays rotated
         else:
@@ -150,7 +147,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
     def next_image(self):
         """
-        Called when the next image is clicked. Increments self.step and calls update_image.
+        Update image with the next image in sequence.
         """
         if not self.step + 1 > len(self.all_files):  # if we go through all files go back to start
             self.step += 1
@@ -166,7 +163,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
     def previous_image(self):
         """
-        Called when the previous image is clicked. Decrements self.step and calls update_image.
+        Update image with the previous image in sequence.
         """
         if not abs(self.step) + 1 > len(self.all_files):
             self.step -= 1
@@ -190,7 +187,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         slide_speed = QInputDialog()
         self.slide_speed = slide_speed.getInt(self, "Slideshow speed",
                                               "Enter slideshow speed (seconds): ",
-                                               value=30, minValue=1)[0]
+                                              value=30, minValue=1)[0]
         # return type: (int, bool)
 
     def shuffle_list(self):
@@ -215,7 +212,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
             self.undo_shuffle_index -= 1
 
         if self.undo_shuffle_index < -9:
-            self.undo_shuffle_index = -8
+            self.undo_shuffle_index = -9
 
     def toggle_fullscreen(self):
         """
@@ -229,11 +226,11 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
             icon.addPixmap(QPixmap(":/Icons/fullscreen.png"), QIcon.Normal, QIcon.Off)  # change icon
             self.actionFullscreen.setIcon(icon)
 
-            self.update_image()
             self.showNormal()
             self.setGeometry(self.window_dimensions)
             self.setPalette(self.default_palette)  # set background to the default color
             self.drawImage.setBackgroundBrush(QBrush(Qt.NoBrush))  # change graphicsview back to default
+            self.update_image()
 
         else:  # go to fullscreen
             icon.addPixmap(QPixmap(":/Icons/closefullscreen.png"), QIcon.Normal, QIcon.Off)  # change icon
@@ -308,9 +305,9 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
     def update_timerLabel(self):
         if self.timer_visible:
             self.timerLabel.setText("{0:02.0f}:{1:02.0f}:{2:02.0f}".format(
-                                    self.timeElapsedTimer.hours,
-                                    self.timeElapsedTimer.mins,
-                                    self.timeElapsedTimer.secs))  # no remainder shown
+                self.timeElapsedTimer.hours,
+                self.timeElapsedTimer.mins,
+                self.timeElapsedTimer.secs))  # no remainder shown
 
     def show_stats(self):
         # divmod = divide and modulo -- divmod(1200 / 1000)  =  (1, 200)
@@ -321,7 +318,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
         QMessageBox.information(self, 'Stats', 'Total time in app: {0:02.0f} hours '
                                                '{1:02.0f} minutes and {2:02.0f} seconds'.format(
-                                                hours, mins, secs))
+            hours, mins, secs))
 
     def open_in_folder(self):
         subprocess.Popen(r'explorer /select,{}'.format(self.current_image_path))
@@ -356,8 +353,6 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
             self.starred_images.remove(action.data())
             self.update_starred_images_menu()
 
-        print(self.starred_images)
-
     def get_current_state(self):
         return self.all_files, self.step
 
@@ -375,10 +370,11 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         """
         Update the image as you resize the window.
         """
-        self.resizeTimer.start(500)
+        self.drawImage.fit_in_view()
 
     def closeEvent(self, event):
         self.timeElapsedTimer.exit = True  # safe thread exit
+        set_shelf('stars', self.starred_images)  # save starred_images
         event.accept()  # close app
 
 
@@ -417,36 +413,44 @@ class ActionOptions:
 
     def create_actions(self):
         self.mw.actionStats = QAction("Run time", self.mw,
-                    statusTip="Show app run time", triggered=self.mw.show_stats)
+                                      statusTip="Show app run time", triggered=self.mw.show_stats)
         self.mw.actionBars = QAction("Hide/Show toolbar and statusbar", self.mw,
-                    statusTip="Hide/show toolbar and statusbar", triggered=self.mw.toggle_bars)
+                                     statusTip="Hide/show toolbar and statusbar", triggered=self.mw.toggle_bars)
 
         # ------- image_actions -------
         self.mw.actionFlipUpDown = self.create_action("Flip upside down", self.mw,
-                    statusTip="Flip image upside down", triggered=self.mw.imageOptions.flip_upside_down,
-                    enabled=False, checkable=True, action_group=self.image_actions)
+                                                      statusTip="Flip image upside down",
+                                                      triggered=self.mw.imageOptions.flip_upside_down,
+                                                      enabled=False, checkable=True, action_group=self.image_actions)
         self.mw.actionMirror = self.create_action("Mirror image", self.mw,
-                    statusTip="Mirror image", triggered=self.mw.imageOptions.mirror, enabled=False, checkable=True,
-                    action_group=self.image_actions)
+                                                  statusTip="Mirror image", triggered=self.mw.imageOptions.mirror,
+                                                  enabled=False, checkable=True,
+                                                  action_group=self.image_actions)
         self.mw.actionRotateRight = self.create_action("Rotate image right", self.mw,
-                    statusTip="Rotate image by 90° to the right", triggered=self.mw.imageOptions.rotate_right,
-                    enabled=False, action_group=self.image_actions)
+                                                       statusTip="Rotate image by 90° to the right",
+                                                       triggered=self.mw.imageOptions.rotate_right,
+                                                       enabled=False, action_group=self.image_actions)
         self.mw.actionRotateLeft = self.create_action("Rotate image left", self.mw,
-                    statusTip="Rotate image by 90° to the left", triggered=self.mw.imageOptions.rotate_left,
-                    enabled=False, action_group=self.image_actions)
+                                                      statusTip="Rotate image by 90° to the left",
+                                                      triggered=self.mw.imageOptions.rotate_left,
+                                                      enabled=False, action_group=self.image_actions)
         self.mw.actionNormal = self.create_action("Normal fit", self.mw,
-                    statusTip="Normal fit the image", triggered=self.mw.imageOptions.normal, enabled=False,
-                    action_group=self.image_actions)
+                                                  statusTip="Normal fit the image",
+                                                  triggered=self.mw.imageOptions.normal, enabled=False,
+                                                  action_group=self.image_actions)
         # ------- image_actions -------
 
         self.mw.actionOpenInFolder = self.create_action("Open containing folder", self.mw,
-                    statusTip="Open containing folder", triggered=self.mw.open_in_folder, enabled=False,
-                    action_group=self.path_actions)
+                                                        statusTip="Open containing folder",
+                                                        triggered=self.mw.open_in_folder, enabled=False,
+                                                        action_group=self.path_actions)
         self.mw.actionPreviousShuffle = QAction("Undo shuffle", self.mw,
-                    statusTip="Undo last shuffle", triggered=self.mw.undo_shuffle, enabled=False,
-                    shortcut=QKeySequence.fromString("Shift+F5"))
+                                                statusTip="Undo last shuffle", triggered=self.mw.undo_shuffle,
+                                                enabled=False,
+                                                shortcut=QKeySequence.fromString("Shift+F5"))
         self.mw.actionStar = QAction("Star this image", self.mw, statusTip="Star this image",
-                    triggered=self.mw.star_image, enabled=False, shortcut=QKeySequence.fromString("Ctrl+D"))
+                                     triggered=self.mw.star_image, enabled=False,
+                                     shortcut=QKeySequence.fromString("Ctrl+D"))
 
     def create_action(self, *args, **kwargs):
         """Construct an action and add it to an action_group."""
@@ -511,9 +515,6 @@ class ActionOptions:
 
         self.main_menu = menu
 
-    def get_menu(self):
-        return self.main_menu
-
 
 class ImageOptions:
     def __init__(self, parent):
@@ -521,7 +522,8 @@ class ImageOptions:
 
     def flip_upside_down(self):
         if self.mw.actionFlipUpDown.isChecked():
-            self.mw.drawImage.rotate(180)  # set the transform -- no need to update image since the rect will stay the same - just flipped
+            self.mw.drawImage.rotate(
+                180)  # set the transform -- no need to update image since the rect will stay the same - just flipped
         else:
             self.normal()
 
@@ -583,7 +585,6 @@ class TimeElapsedThread(QThread):
 
 
 class DrawImage(QGraphicsView):
-    #### TODO: ZOOMING ON MOUSE POS
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -606,19 +607,32 @@ class DrawImage(QGraphicsView):
         self.setScene(self.imageScene)  # apply scene to view
         self.show()  # show image
 
-    def draw_image(self, image, factor=1):
+        self.zoom_factor = 1.2
+
+    def draw_image(self, image):
         pix_image = QPixmap(image)  # make pixmap
         self.pix_item.setPixmap(pix_image)
-        self.setSceneRect(QRectF(0.0, 0.0, pix_image.width(), pix_image.height()))  # update the rect so it isn't retarded like by default -- center image
+        self.setSceneRect(QRectF(0.0, 0.0, pix_image.width(),
+                                 pix_image.height()))  # update the rect so it isn't retarded like by default -- center image
+        self.fit_in_view()
+
+    def fit_in_view(self):
         self.fitInView(self.sceneRect(), Qt.KeepAspectRatio)
 
     def wheelEvent(self, event):
+        self.setTransformationAnchor(self.NoAnchor)
+        self.setResizeAnchor(self.NoAnchor)
+
+        old_pos = self.mapToScene(event.pos())
+
         if event.delta() > 0:  # mouse wheel away = zoom in
-            self.scale(1.2, 1.2)
+            self.scale(self.zoom_factor, self.zoom_factor)
         else:
-            self.scale(0.8, 0.8)
-        pos = self.mapToScene(event.pos())  # translate pos to scene pos
-        self.centerOn(pos)
+            self.scale(1 / self.zoom_factor, 1 / self.zoom_factor)
+
+        new_pos = self.mapToScene(event.pos())  # translate pos to scene pos
+        delta = new_pos - old_pos
+        self.translate(delta.x(), delta.y())
 
 
 if __name__ == '__main__':
