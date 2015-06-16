@@ -25,6 +25,20 @@ def set_shelf(key, item):
         db[key] = item
 
 
+def get_time_from_secs(secs, pretty=True):
+    """
+    Calculate hours, minutes, seconds from seconds.
+    Return tuple (h, min, s)
+    """
+    # divmod = divide and modulo -- divmod(1200 / 1000)  =  (1, 200)
+    mins, secs = divmod(secs, 60)
+    hours, mins = divmod(mins, 60)
+    if pretty:
+        return "{0:02.0f}:{1:02.0f}:{2:02.0f}".format(hours, mins, secs)
+    else:
+        return hours, mins, secs
+
+
 class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
     WINDOW_TITLE = "Poseviewer"
 
@@ -38,7 +52,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.setCentralWidget(self.drawImage)  # fills the whole window
 
         self.slideshowTimer = QTimer()  # make a timer ready to be used
-        self.timeElapsedTimer = TimeElapsedThread()
+        self.timeElapsedTimer = TimeElapsedThread(self)
         self.totalTimeElapsed = QElapsedTimer()  # keep a track of the whole time spent in app
         self.totalTimeElapsed.start()
 
@@ -82,7 +96,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.action_options.enable_actions_for(self.action_options.path_actions)
 
         self.window_dimensions = self.geometry()  # remember the geometry for returning from fullscreen
-        self.default_palette = self.palette()  # the default palette for returning from fullscreen
+        self.DEFAULT_PALETTE = self.palette()
 
     def open_dir(self):
         """
@@ -108,48 +122,18 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
         self.action_options.enable_all_actions()  # enable the actions
 
-    def get_next_image(self):
-        for root, dirs, files in scandir.walk(self.dirs[-1]):
-            for _file in files:
-                yield os.path.abspath(os.path.join(root, _file))
-
-    def toggle_slideshow(self):
-        """
-        Updates the imageLabel with the current image from self.step.
-        Also increments self.step and it is called every timer timeout.
-        If the slideshow is playing change the icon.
-        """
-        icon = QIcon()
-        if self.is_playing:  # if it's playing, stop it
-            icon.addPixmap(QPixmap(":/Icons/play.png"), QIcon.Normal, QIcon.Off)
-            self.actionPlay.setIcon(icon)  # set the icon to a pause button
-            self.stop_slideshowTimer()
-            self.is_playing = False
-
-        else:  # if it's not playing, play it
-            self.beep()
-            icon.addPixmap(QPixmap(":/Icons/pause.png"), QIcon.Normal, QIcon.Off)
-            self.actionPlay.setIcon(icon)  # set the icon to a play button
-            self.next_image()
-            self.start_slideshowTimer()
-            self.is_playing = True
-
-    def update_image(self, factor=1.2, image_path=None):
+    def update_image(self, image_path=None):
         """
         Update the graphicsview with image_path or current_image_path.
-        Use the factor for zooming.
         """
-        self.drawImage.zoom_factor = factor  # alter factor level through wheel events
-
         if image_path:
             self.drawImage.draw_image(image_path)
             self.current_image_path = image_path
         elif self.current_image_path:
             self.drawImage.draw_image(self.current_image_path)
-            self.set_window_title(self.current_image_path)
 
     def prepare_image(self):
-        # self.current_image_path = self.get_current_image_path()
+        self.set_window_title(self.current_image_path)
         if self.actionMirror.isChecked() or self.actionFlipUpDown.isChecked():
             self.update_image()  # the graphicsview still stays rotated
         else:
@@ -185,22 +169,6 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.update_timerLabel()  # immediately update
         self.prepare_image()
 
-    def set_window_title(self, title):
-        if os.path.isfile(title):
-            self.setWindowTitle("{} - {}".format(title.rsplit('\\', 1)[-1], self.WINDOW_TITLE))
-        else:
-            self.setWindowTitle("{} - {}".format(title, self.WINDOW_TITLE))
-
-    def set_slide_speed(self):
-        """
-        Set the slideshow speed by opening a inputdialog.
-        """
-        slide_speed = QInputDialog()
-        self.slide_speed = slide_speed.getInt(self, "Slideshow speed",
-                                              "Enter slideshow speed (seconds): ",
-                                              value=30, minValue=1)[0]
-        # return type: (int, bool)
-
     def shuffle_list(self):
         """
         Shuffle the current list of images. Also initialize the settings again.
@@ -219,72 +187,77 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
             self.all_files = all_files
             self.step = step
             self.prepare_image()
-            self.update_image()
             self.undo_shuffle_index -= 1
 
         if self.undo_shuffle_index < -9:
             self.undo_shuffle_index = -9
 
+    def _paint_background(self, qcolor, full_background=False):
+        if full_background:
+            full_background = QPalette()
+            full_background.setColor(self.backgroundRole(), qcolor)
+            self.setPalette(full_background)
+        else:
+            self.setPalette(self.DEFAULT_PALETTE)
+
+        self.drawImage.setBackgroundBrush(QBrush(qcolor))
+
     def toggle_fullscreen(self):
         """
-        Toggles fullscreen mode (F11). If already in fullscreen, first scale the image to the given size
-        remembered from before entering fullscreen mode. The same goes for resizing the geometry back to
-        default.
-        Set the color and remove the menubar, except the control buttons.
+        Deal with entering/exiting fullscreen mode.
         """
-        icon = QIcon()
         if self.isFullScreen():  # go back to normal
-            icon.addPixmap(QPixmap(":/Icons/fullscreen.png"), QIcon.Normal, QIcon.Off)  # change icon
-            self.actionFullscreen.setIcon(icon)
-
-            self.showNormal()
+            self.set_icon(":/Icons/fullscreen.png", self.actionFullscreen)
+            self._paint_background(Qt.NoBrush)
             self.setGeometry(self.window_dimensions)
-            self.setPalette(self.default_palette)  # set background to the default color
-            self.drawImage.setBackgroundBrush(QBrush(Qt.NoBrush))  # change graphicsview back to default
-            self.update_image()
-
+            self.showNormal()
         else:  # go to fullscreen
-            icon.addPixmap(QPixmap(":/Icons/closefullscreen.png"), QIcon.Normal, QIcon.Off)  # change icon
-            self.actionFullscreen.setIcon(icon)
-
+            self.set_icon(":/Icons/closefullscreen.png", self.actionFullscreen)
             self.window_dimensions = self.geometry()  # save current window settings
+            self._paint_background(Qt.black, True)
             self.showFullScreen()
 
-            palette = QPalette()
-            palette.setColor(self.backgroundRole(), Qt.black)  # set background to black
-            self.drawImage.setBackgroundBrush(QBrush(Qt.black))  # paint graphicview's background to black
-            self.setPalette(palette)
-            self.update_image()  # update the image to fit the fullscreen mode
+        self.update_image()  # update the image to fit the fullscreen mode
+
+    def toggle_slideshow(self):
+        """Deals with starting/stopping the slideshow.
+        """
+        if self.is_playing:  # if it's playing, stop it
+            self.set_icon(":/Icons/play.png", self.actionPlay)
+            self.stop_slideshowTimer()
+            self.is_playing = False
+        else:  # if it's not playing, play it
+            self.beep()
+            self.set_icon(":/Icons/pause.png", self.actionPlay)
+            self.next_image()
+            self.start_slideshowTimer()
+            self.is_playing = True
 
     def toggle_sound(self):
         """
         Toggle whether there should be a beep during a slideshow.
         """
-        icon = QIcon()
         if self.sound:  # sound is on and you stop it
             self.sound = False
-            icon.addPixmap(QPixmap(":/Icons/soundoff.png"), QIcon.Normal, QIcon.Off)
-            self.actionSound.setIcon(icon)
+            self.set_icon(":/Icons/soundoff.png", self.actionSound)
         else:  # sound is not on and you put it on
             self.sound = True
-            icon.addPixmap(QPixmap(":/Icons/soundon.png"), QIcon.Normal, QIcon.Off)
-            self.actionSound.setIcon(icon)
+            self.set_icon(":/Icons/soundon.png", self.actionSound)
 
     def toggle_label_timer(self):
         """
         Toggle whether the timerLabel should be displayed.
         """
         if self.timer_visible:
-            self.timeElapsedTimer.set_time_to_zero()
             self.timer_visible = False
             self.actionTimerLabel.setVisible(False)
-            self.update_timerLabel()
         else:
             self.actionTimerLabel.setVisible(True)
             self.timer_visible = True
-            self.timeElapsedTimer.set_time_to_zero()
-            self.update_timerLabel()  # for responsiveness
             self.timeElapsedTimer.start()
+
+        self.update_timerLabel()
+        self.timeElapsedTimer.set_time_to_zero()
 
     def toggle_bars(self):
         """
@@ -312,21 +285,11 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
     def update_timerLabel(self):
         if self.timer_visible:
-            self.timerLabel.setText("{0:02.0f}:{1:02.0f}:{2:02.0f}".format(
-                self.timeElapsedTimer.hours,
-                self.timeElapsedTimer.mins,
-                self.timeElapsedTimer.secs))  # no remainder shown
+            self.timerLabel.setText(self.timeElapsedTimer.time_elapsed())
 
     def show_stats(self):
-        # divmod = divide and modulo -- divmod(1200 / 1000)  =  (1, 200)
-        # [0] = division, [1] = remainder(modulo)
-        secs, ms = divmod(self.totalTimeElapsed.elapsed(), 1000)  # ms to s
-        mins, secs = divmod(secs, 60)  # s to min
-        hours, mins = divmod(mins, 60)  # min to h
-
-        QMessageBox.information(self, 'Stats', 'Total time in app: {0:02.0f} hours '
-                                               '{1:02.0f} minutes and {2:02.0f} seconds'.format(
-            hours, mins, secs))
+        QMessageBox.information(self, 'Stats',
+                                'Total time in app: ' + get_time_from_secs(self.totalTimeElapsed.elapsed() / 1000))
 
     def open_in_folder(self):
         subprocess.Popen(r'explorer /select,{}'.format(self.current_image_path))
@@ -350,6 +313,27 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.action_options.stars_menu = stars_menu
         return stars_menu
 
+    def set_window_title(self, title):
+        if os.path.isfile(title):
+            self.setWindowTitle("{} - {}".format(title.rsplit('\\', 1)[-1], self.WINDOW_TITLE))
+        else:
+            self.setWindowTitle("{} - {}".format(title, self.WINDOW_TITLE))
+
+    def set_slide_speed(self):
+        """
+        Set the slideshow speed by opening a inputdialog.
+        """
+        slide_speed = QInputDialog()
+        self.slide_speed = slide_speed.getInt(self, "Slideshow speed",
+                                              "Enter slideshow speed (seconds): ",
+                                              value=30, minValue=1)[0]
+        # return type: (int, bool)
+
+    def set_icon(self, path, target):
+        icon = QIcon()
+        icon.addPixmap(QPixmap(path), QIcon.Normal, QIcon.Off)
+        target.setIcon(icon)
+
     def get_starred_image(self, action):
         self.action_options.stars_menu.triggered.disconnect(self.get_starred_image)
         if self.action_options.image_actions.isEnabled():
@@ -369,6 +353,11 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
     def get_current_image_path(self):
         return self.all_files[self.step]
 
+    def get_next_image(self):
+        for root, dirs, files in scandir.walk(self.dirs[-1]):
+            for _file in files:
+                yield os.path.abspath(os.path.join(root, _file))
+
     def contextMenuEvent(self, event):
         """Show a context menu on right click."""
         menu = QMenu()
@@ -383,7 +372,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.drawImage.fit_in_view()
 
     def closeEvent(self, event):
-        self.timeElapsedTimer.exit = True  # safe thread exit
+        self.timeElapsedTimer.exit()
         set_shelf('stars', self.starred_images)  # save starred_images
         event.accept()  # close app
 
@@ -528,18 +517,17 @@ class ImageOptions:
 
     def flip_upside_down(self):
         if self.mw.actionFlipUpDown.isChecked():
-            self.mw.drawImage.rotate(
-                180)  # set the transform -- no need to update image since the rect will stay the same - just flipped
+            self.mw.drawImage.rotate(180)  # no need to update image since the rect will stay the same - just flipped
         else:
             self.normal()
 
     def mirror(self):
         if self.mw.actionMirror.isChecked():
-            transform = QTransform().rotate(180, Qt.YAxis)  # mirror
+            transform = QTransform().rotate(180, Qt.YAxis)
             self.mw.drawImage.setTransform(transform)
             self.mw.update_image()
         else:
-            self.normal()  # revert back to normal
+            self.normal()
 
     def rotate_right(self):
         self.mw.drawImage.rotate(90)
@@ -567,30 +555,34 @@ class TimeElapsedThread(QThread):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.set_time_to_zero()
-        self.exit = False  # for safe exiting  -  not stuck in while loop
+        self.secs_elapsed = 0
+        self.secs = 0
+        self.mins = 0
+        self.hours = 0
+
+        # self.exit = False  # for safe exiting  -  not stuck in while loop
 
     def run(self):
-        while not self.exit:
+        while True:
             self.sleep(1)  # 1 seconds expired
             self.secs_elapsed += 1  # secs_elapsed instead of secs because secs is recalculated
-            self.set_time_elapsed()  # don't calculate from ms because we always restart the timer
+            self.time_elapsed()  # don't calculate from ms because we always restart the timer
             self.secElapsed.emit()
 
-    def set_time_elapsed(self):
+    def time_elapsed(self):
         """
         Calculate elapsed hours, minutes, seconds.
         """
-        # divmod = divide and modulo -- divmod(1200 / 1000)  =  (1, 200)
-        # [0] = division, [1] = remainder(modulo)
-        self.mins, self.secs = divmod(self.secs_elapsed, 60)  # s to min
-        self.hours, self.mins = divmod(self.mins, 60)  # min to h
+        self.hours, self.mins, self.secs = get_time_from_secs(self.secs_elapsed, False)
+        return get_time_from_secs(self.secs_elapsed)
 
     def set_time_to_zero(self):
         self.secs_elapsed, self.secs, self.mins, self.hours = 0, 0, 0, 0
 
 
 class DrawImage(QGraphicsView):
+    ZOOM_FACTOR = 1.2
+
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -613,8 +605,6 @@ class DrawImage(QGraphicsView):
         self.setScene(self.imageScene)  # apply scene to view
         self.show()  # show image
 
-        self.zoom_factor = 1.2
-
     def draw_image(self, image):
         pix_image = QPixmap(image)  # make pixmap
         self.pix_item.setPixmap(pix_image)
@@ -632,9 +622,9 @@ class DrawImage(QGraphicsView):
         old_pos = self.mapToScene(event.pos())
 
         if event.delta() > 0:  # mouse wheel away = zoom in
-            self.scale(self.zoom_factor, self.zoom_factor)
+            self.scale(self.ZOOM_FACTOR, self.ZOOM_FACTOR)
         else:
-            self.scale(1 / self.zoom_factor, 1 / self.zoom_factor)
+            self.scale(1 / self.ZOOM_FACTOR, 1 / self.ZOOM_FACTOR)
 
         new_pos = self.mapToScene(event.pos())  # translate pos to scene pos
         delta = new_pos - old_pos
@@ -642,7 +632,6 @@ class DrawImage(QGraphicsView):
 
 
 if __name__ == '__main__':
-    # fix, so the app shows the correct icon in the taskbar
     myappid = 'Marko.Poseviewer.python.1'
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
@@ -653,3 +642,4 @@ if __name__ == '__main__':
 
 #TODO create efficient mechanism for loading large amounts of images (>3000)
 #TODO load multiple dirs for images and mix them up
+#TODO fix, so the app shows the correct icon in the taskbar
