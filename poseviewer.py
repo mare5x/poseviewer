@@ -13,10 +13,12 @@ import shelve
 import poseviewerMainGui
 
 
-def get_shelf(key):
-    with shelve.open('settings') as db:
-        return db[key]
-
+def get_shelf(key, fallback=None):
+    try:
+        with shelve.open('settings') as db:
+            return db[key]
+    except KeyError:
+        return fallback
 
 def set_shelf(key, item):
     with shelve.open('settings') as db:
@@ -24,6 +26,8 @@ def set_shelf(key, item):
 
 
 class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
+    WINDOW_TITLE = "Poseviewer"
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setupUi(self)
@@ -67,16 +71,13 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.undo_shuffle_index = -1
         self.current_image_path = "."
         self.all_files = []
-        try:
-            self.starred_images = get_shelf('stars')
-            self.update_starred_images_menu()
-        except KeyError:
-            self.starred_images = []
 
-        try:
-            self.dirs = get_shelf('dirs')
-        except KeyError:
-            self.dirs = ["."]  # the directory of the images, "." = default value
+        self._next = None
+
+        self.dirs = get_shelf('dirs', ["."])
+        self.starred_images = get_shelf('stars', [])
+        if self.starred_images:
+            self.update_starred_images_menu()
 
         self.action_options.enable_actions_for(self.action_options.path_actions)
 
@@ -91,7 +92,11 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.dirs.pop(0)
         set_shelf('dirs', self.dirs)
         if not self.dirs[-1] == '':  # '' is not a valid path
-            self.all_files_dir()
+            # self.all_files_dir()
+            self._next = self.get_next_image()
+            self.current_image_path = next(self._next)
+            self.next_image()
+            self.action_options.enable_all_actions()
 
     def all_files_dir(self):
         """
@@ -102,6 +107,11 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.next_image()
 
         self.action_options.enable_all_actions()  # enable the actions
+
+    def get_next_image(self):
+        for root, dirs, files in scandir.walk(self.dirs[-1]):
+            for _file in files:
+                yield os.path.abspath(os.path.join(root, _file))
 
     def toggle_slideshow(self):
         """
@@ -134,12 +144,12 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         if image_path:
             self.drawImage.draw_image(image_path)
             self.current_image_path = image_path
-        elif self.all_files and self.step < len(self.all_files) or self.current_image_path:
+        elif self.current_image_path:
             self.drawImage.draw_image(self.current_image_path)
-            self.update_status_bar(self.current_image_path)
+            self.set_window_title(self.current_image_path)
 
     def prepare_image(self):
-        self.current_image_path = self.get_current_image_path()
+        # self.current_image_path = self.get_current_image_path()
         if self.actionMirror.isChecked() or self.actionFlipUpDown.isChecked():
             self.update_image()  # the graphicsview still stays rotated
         else:
@@ -149,11 +159,12 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         """
         Update image with the next image in sequence.
         """
-        if not self.step + 1 > len(self.all_files):  # if we go through all files go back to start
-            self.step += 1
-        else:
-            self.step = 0
+        # if not self.step + 1 > len(self.all_files):  # if we go through all files go back to start
+        #     self.step += 1
+        # else:
+        #     self.step = 0
 
+        self.current_image_path = next(self._next)
         self.timeElapsedTimer.set_time_to_zero()
         self.update_timerLabel()
         self.prepare_image()
@@ -174,11 +185,11 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.update_timerLabel()  # immediately update
         self.prepare_image()
 
-    def update_status_bar(self, image_path):
-        """
-        Update the status bar with the image path.
-        """
-        self.statusBar.showMessage("{0}".format(image_path))
+    def set_window_title(self, title):
+        if os.path.isfile(title):
+            self.setWindowTitle("{} - {}".format(title.rsplit('\\', 1)[-1], self.WINDOW_TITLE))
+        else:
+            self.setWindowTitle("{} - {}".format(title, self.WINDOW_TITLE))
 
     def set_slide_speed(self):
         """
@@ -277,16 +288,13 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
     def toggle_bars(self):
         """
-        Toggle bars - right click menu, action. Toggle toolbar and
-        statusbar visibility.
+        Toggle bars - right click menu, action. Toggle toolbar visibility.
         """
         if self.bars_displayed:
             self.toolBar.hide()
-            self.statusBar.hide()
             self.bars_displayed = False
         else:
             self.toolBar.show()
-            self.statusBar.show()
             self.bars_displayed = True
 
         self.update_image()
@@ -353,6 +361,8 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
             self.starred_images.remove(action.data())
             self.update_starred_images_menu()
 
+        self.set_window_title(action.data())
+
     def get_current_state(self):
         return self.all_files, self.step
 
@@ -413,42 +423,38 @@ class ActionOptions:
 
     def create_actions(self):
         self.mw.actionStats = QAction("Run time", self.mw,
-                                      statusTip="Show app run time", triggered=self.mw.show_stats)
-        self.mw.actionBars = QAction("Hide/Show toolbar and statusbar", self.mw,
-                                     statusTip="Hide/show toolbar and statusbar", triggered=self.mw.toggle_bars)
+                                      triggered=self.mw.show_stats)
+        self.mw.actionBars = QAction("Hide/Show toolbar", self.mw,
+                                     triggered=self.mw.toggle_bars)
 
         # ------- image_actions -------
         self.mw.actionFlipUpDown = self.create_action("Flip upside down", self.mw,
-                                                      statusTip="Flip image upside down",
                                                       triggered=self.mw.imageOptions.flip_upside_down,
                                                       enabled=False, checkable=True, action_group=self.image_actions)
         self.mw.actionMirror = self.create_action("Mirror image", self.mw,
-                                                  statusTip="Mirror image", triggered=self.mw.imageOptions.mirror,
+                                                  triggered=self.mw.imageOptions.mirror,
                                                   enabled=False, checkable=True,
                                                   action_group=self.image_actions)
         self.mw.actionRotateRight = self.create_action("Rotate image right", self.mw,
-                                                       statusTip="Rotate image by 90° to the right",
                                                        triggered=self.mw.imageOptions.rotate_right,
                                                        enabled=False, action_group=self.image_actions)
         self.mw.actionRotateLeft = self.create_action("Rotate image left", self.mw,
-                                                      statusTip="Rotate image by 90° to the left",
+
                                                       triggered=self.mw.imageOptions.rotate_left,
                                                       enabled=False, action_group=self.image_actions)
         self.mw.actionNormal = self.create_action("Normal fit", self.mw,
-                                                  statusTip="Normal fit the image",
                                                   triggered=self.mw.imageOptions.normal, enabled=False,
                                                   action_group=self.image_actions)
         # ------- image_actions -------
 
         self.mw.actionOpenInFolder = self.create_action("Open containing folder", self.mw,
-                                                        statusTip="Open containing folder",
                                                         triggered=self.mw.open_in_folder, enabled=False,
                                                         action_group=self.path_actions)
         self.mw.actionPreviousShuffle = QAction("Undo shuffle", self.mw,
-                                                statusTip="Undo last shuffle", triggered=self.mw.undo_shuffle,
+                                                triggered=self.mw.undo_shuffle,
                                                 enabled=False,
                                                 shortcut=QKeySequence.fromString("Shift+F5"))
-        self.mw.actionStar = QAction("Star this image", self.mw, statusTip="Star this image",
+        self.mw.actionStar = QAction("Star this image", self.mw,
                                      triggered=self.mw.star_image, enabled=False,
                                      shortcut=QKeySequence.fromString("Ctrl+D"))
 
@@ -644,3 +650,6 @@ if __name__ == '__main__':
     form = MainWindow()
     form.show()
     app.exec_()
+
+#TODO create efficient mechanism for loading large amounts of images (>3000)
+#TODO load multiple dirs for images and mix them up

@@ -58,7 +58,6 @@
    <addaction name="actionTimer"/>
    <addaction name="separator"/>
   </widget>
-  <widget class="QStatusBar" name="statusBar"/>
   <action name="actionSpeed">
    <property name="icon">
     <iconset resource="icons.qrc">
