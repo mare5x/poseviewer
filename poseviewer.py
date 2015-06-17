@@ -46,10 +46,10 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         super().__init__(parent)
         self.setupUi(self)
 
-        self.drawImage = DrawImage(self)
-        self.imageOptions = ImageOptions(self)
+        self.image_path = ImagePath()
+        self.image_canvas = ImageCanvas(self)
 
-        self.setCentralWidget(self.drawImage)  # fills the whole window
+        self.setCentralWidget(self.image_canvas)  # fills the whole window
 
         self.slideshowTimer = QTimer()  # make a timer ready to be used
         self.timeElapsedTimer = TimeElapsedThread(self)
@@ -62,7 +62,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.timerLabel.setStyleSheet("font: 17pt; color: rgb(0, 180, 255)")  # set font size to 17 and color to blueish
         self.actionTimerLabel = self.toolBar.addWidget(self.timerLabel)  # add the timer label to the toolbar
 
-        self.actionOpen.triggered.connect(self.open_dir)
+        self.actionOpen.triggered.connect(self.get_directory)
         self.actionPlay.triggered.connect(self.toggle_slideshow)  # show image and start the timer
         self.actionShuffle.triggered.connect(self.shuffle_list)  # make a shuffled list
         self.actionNext.triggered.connect(self.next_image)
@@ -75,18 +75,17 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.timeElapsedTimer.secElapsed.connect(self.update_timerLabel)  # update the timer label every second
         self.slideshowTimer.timeout.connect(self.next_image)  # every slide_speed seconds show image
 
-        self.step = 0  # go through all files
         self.is_playing = False  # is the slideshow playing
         self.sound = True  # is the sound turned on
         self.slide_speed = 30
         self.timer_visible = False
         self.bars_displayed = True
-        self.previous_shuffle = []
-        self.undo_shuffle_index = -1
-        self.current_image_path = "."
-        self.all_files = []
 
-        self._next = None
+        self.current_index = 0
+        self.undo_shuffle_index = -1
+        self.previous_shuffle = []
+        self.all_files = []
+        self.current_image_path = "."
 
         self.dirs = get_shelf('dirs', ["."])
         self.starred_images = get_shelf('stars', [])
@@ -98,7 +97,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.window_dimensions = self.geometry()  # remember the geometry for returning from fullscreen
         self.DEFAULT_PALETTE = self.palette()
 
-    def open_dir(self):
+    def get_directory(self):
         """
         Append the image directory to self.dirs
         """
@@ -106,49 +105,37 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.dirs.pop(0)
         set_shelf('dirs', self.dirs)
         if not self.dirs[-1] == '':  # '' is not a valid path
-            # self.all_files_dir()
-            self._next = self.get_next_image()
-            self.current_image_path = next(self._next)
-            self.next_image()
+            self.all_files = self.image_path.load(self.dirs[-1])
             self.action_options.enable_all_actions()
-
-    def all_files_dir(self):
-        """
-        Constructs all_files and enables all actions.
-        """
-        self.all_files = [os.path.join(self.dirs[-1], f) for f in scandir.listdir(
-            self.dirs[-1]) if os.path.isfile(os.path.join(self.dirs[-1], f))]
-        self.next_image()
-
-        self.action_options.enable_all_actions()  # enable the actions
+            self.next_image()
 
     def update_image(self, image_path=None):
         """
         Update the graphicsview with image_path or current_image_path.
         """
         if image_path:
-            self.drawImage.draw_image(image_path)
+            self.image_canvas.draw_image(image_path)
             self.current_image_path = image_path
         elif self.current_image_path:
-            self.drawImage.draw_image(self.current_image_path)
+            self.image_canvas.draw_image(self.current_image_path)
 
     def prepare_image(self):
         self.set_window_title(self.current_image_path)
-        if self.actionMirror.isChecked() or self.actionFlipUpDown.isChecked():
+        if self.image_canvas.actionMirror.isChecked() or self.image_canvas.actionFlipUpDown.isChecked():
             self.update_image()  # the graphicsview still stays rotated
         else:
-            self.imageOptions.normal()  # update image and reset any transformations
+            self.image_canvas.normal()  # update image and reset any transformations
 
     def next_image(self):
         """
         Update image with the next image in sequence.
         """
-        # if not self.step + 1 > len(self.all_files):  # if we go through all files go back to start
-        #     self.step += 1
-        # else:
-        #     self.step = 0
+        if not self.current_index + 1 > len(self.all_files):  # if we go through all files go back to start
+            self.current_index += 1
+        else:
+            self.current_index = 0
 
-        self.current_image_path = next(self._next)
+        self.current_image_path = self.get_current_image_path()
         self.timeElapsedTimer.set_time_to_zero()
         self.update_timerLabel()
         self.prepare_image()
@@ -160,10 +147,10 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         """
         Update image with the previous image in sequence.
         """
-        if not abs(self.step) + 1 > len(self.all_files):
-            self.step -= 1
+        if not abs(self.current_index) + 1 > len(self.all_files):
+            self.current_index -= 1
         else:
-            self.step = 0
+            self.current_index = 0
 
         self.timeElapsedTimer.set_time_to_zero()  # reset timer back to 0
         self.update_timerLabel()  # immediately update
@@ -177,15 +164,15 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
             self.previous_shuffle.pop(0)
         self.previous_shuffle.append(self.get_current_state())
         self.undo_shuffle_index = -1
-        self.step = 0
+        self.current_index = 0
         self.all_files = random.sample(self.all_files, len(self.all_files))  # create a shuffled new list
         self.next_image()
 
     def undo_shuffle(self):
         if abs(self.undo_shuffle_index) <= len(self.previous_shuffle):
-            all_files, step = self.previous_shuffle[self.undo_shuffle_index]
+            all_files, current_index = self.previous_shuffle[self.undo_shuffle_index]
             self.all_files = all_files
-            self.step = step
+            self.current_index = current_index
             self.prepare_image()
             self.undo_shuffle_index -= 1
 
@@ -200,7 +187,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         else:
             self.setPalette(self.DEFAULT_PALETTE)
 
-        self.drawImage.setBackgroundBrush(QBrush(qcolor))
+        self.image_canvas.setBackgroundBrush(QBrush(qcolor))
 
     def toggle_fullscreen(self):
         """
@@ -348,15 +335,10 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.set_window_title(action.data())
 
     def get_current_state(self):
-        return self.all_files, self.step
+        return self.all_files, self.current_index
 
     def get_current_image_path(self):
-        return self.all_files[self.step]
-
-    def get_next_image(self):
-        for root, dirs, files in scandir.walk(self.dirs[-1]):
-            for _file in files:
-                yield os.path.abspath(os.path.join(root, _file))
+        return self.all_files[self.current_index]
 
     def contextMenuEvent(self, event):
         """Show a context menu on right click."""
@@ -369,13 +351,45 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         """
         Update the image as you resize the window.
         """
-        self.drawImage.fit_in_view()
+        self.image_canvas.fit_in_view()
 
     def closeEvent(self, event):
         self.timeElapsedTimer.exit()
         set_shelf('stars', self.starred_images)  # save starred_images
         event.accept()  # close app
 
+
+class ImagePath:
+    def __init__(self):
+        self.current_index = 0
+        self.undo_shuffle_index = -1
+        self.previous_shuffle = []
+        self.all_files = []
+        self.current_image_path = "."
+
+    def next(self):
+        pass
+
+    def prev(self):
+        pass
+
+    def random(self):
+        pass
+
+    def current(self):
+        pass
+
+    def load(self, path):
+        self.all_files = [os.path.join(path, f) for f in scandir.listdir(path) if os.path.isfile(os.path.join(path, f))]
+        return self.all_files
+
+    def mix(self, path):
+        pass
+
+    # def get_next_image(self):
+    #     for root, dirs, files in scandir.walk(self.dirs[-1]):
+    #         for _file in files:
+    #             yield os.path.abspath(os.path.join(root, _file))
 
 class ActionOptions:
     def __init__(self, parent):
@@ -417,24 +431,24 @@ class ActionOptions:
                                      triggered=self.mw.toggle_bars)
 
         # ------- image_actions -------
-        self.mw.actionFlipUpDown = self.create_action("Flip upside down", self.mw,
-                                                      triggered=self.mw.imageOptions.flip_upside_down,
-                                                      enabled=False, checkable=True, action_group=self.image_actions)
-        self.mw.actionMirror = self.create_action("Mirror image", self.mw,
-                                                  triggered=self.mw.imageOptions.mirror,
-                                                  enabled=False, checkable=True,
-                                                  action_group=self.image_actions)
-        self.mw.actionRotateRight = self.create_action("Rotate image right", self.mw,
-                                                       triggered=self.mw.imageOptions.rotate_right,
-                                                       enabled=False, action_group=self.image_actions)
-        self.mw.actionRotateLeft = self.create_action("Rotate image left", self.mw,
-
-                                                      triggered=self.mw.imageOptions.rotate_left,
-                                                      enabled=False, action_group=self.image_actions)
-        self.mw.actionNormal = self.create_action("Normal fit", self.mw,
-                                                  triggered=self.mw.imageOptions.normal, enabled=False,
-                                                  action_group=self.image_actions)
-        # ------- image_actions -------
+        self.mw.image_canvas.actionFlipUpDown = self.create_action("Flip upside down", self.mw,
+                                                                    triggered=self.mw.image_canvas.flip_upside_down,
+                                                                    enabled=False, checkable=True,
+                                                                    action_group=self.image_actions)
+        self.mw.image_canvas.actionMirror = self.create_action("Mirror image", self.mw,
+                                                                triggered=self.mw.image_canvas.mirror,
+                                                                enabled=False, checkable=True,
+                                                                action_group=self.image_actions)
+        self.mw.image_canvas.actionRotateRight = self.create_action("Rotate image right", self.mw,
+                                                                     triggered=self.mw.image_canvas.rotate_right,
+                                                                     enabled=False, action_group=self.image_actions)
+        self.mw.image_canvas.actionRotateLeft = self.create_action("Rotate image left", self.mw,
+                                                                    triggered=self.mw.image_canvas.rotate_left,
+                                                                    enabled=False, action_group=self.image_actions)
+        self.mw.image_canvas.actionNormal = self.create_action("Normal fit", self.mw,
+                                                                triggered=self.mw.image_canvas.normal, enabled=False,
+                                                                action_group=self.image_actions)
+        # ------- /image_actions -------
 
         self.mw.actionOpenInFolder = self.create_action("Open containing folder", self.mw,
                                                         triggered=self.mw.open_in_folder, enabled=False,
@@ -511,39 +525,6 @@ class ActionOptions:
         self.main_menu = menu
 
 
-class ImageOptions:
-    def __init__(self, parent):
-        self.mw = parent
-
-    def flip_upside_down(self):
-        if self.mw.actionFlipUpDown.isChecked():
-            self.mw.drawImage.rotate(180)  # no need to update image since the rect will stay the same - just flipped
-        else:
-            self.normal()
-
-    def mirror(self):
-        if self.mw.actionMirror.isChecked():
-            transform = QTransform().rotate(180, Qt.YAxis)
-            self.mw.drawImage.setTransform(transform)
-            self.mw.update_image()
-        else:
-            self.normal()
-
-    def rotate_right(self):
-        self.mw.drawImage.rotate(90)
-        self.mw.update_image()
-
-    def rotate_left(self):
-        self.mw.drawImage.rotate(-90)
-        self.mw.update_image()
-
-    def normal(self):
-        self.mw.actionFlipUpDown.setChecked(False)
-        self.mw.actionMirror.setChecked(False)
-        self.mw.drawImage.resetTransform()
-        self.mw.update_image()
-
-
 class TimeElapsedThread(QThread):
     """
     Thread for continuous time tracking.
@@ -580,7 +561,7 @@ class TimeElapsedThread(QThread):
         self.secs_elapsed, self.secs, self.mins, self.hours = 0, 0, 0, 0
 
 
-class DrawImage(QGraphicsView):
+class ImageCanvas(QGraphicsView):
     ZOOM_FACTOR = 1.2
 
     def __init__(self, parent=None):
@@ -615,6 +596,29 @@ class DrawImage(QGraphicsView):
     def fit_in_view(self):
         self.fitInView(self.sceneRect(), Qt.KeepAspectRatio)
 
+    def flip_upside_down(self):
+        if self.actionFlipUpDown.isChecked():
+            self.rotate(180)  # no need to update image since the rect will stay the same - just flipped
+        else:
+            self.normal()
+
+    def mirror(self):
+        if self.actionMirror.isChecked():
+            self.setTransform(QTransform().rotate(180, Qt.YAxis))
+        else:
+            self.normal()
+
+    def rotate_right(self):
+        self.rotate(90)
+
+    def rotate_left(self):
+        self.rotate(-90)
+
+    def normal(self):
+        self.actionFlipUpDown.setChecked(False)
+        self.actionMirror.setChecked(False)
+        self.resetTransform()
+
     def wheelEvent(self, event):
         self.setTransformationAnchor(self.NoAnchor)
         self.setResizeAnchor(self.NoAnchor)
@@ -640,6 +644,9 @@ if __name__ == '__main__':
     form.show()
     app.exec_()
 
+
 #TODO create efficient mechanism for loading large amounts of images (>3000)
 #TODO load multiple dirs for images and mix them up
 #TODO fix, so the app shows the correct icon in the taskbar
+#TODO draw tool
+#TODO save image (with transformation applied)
