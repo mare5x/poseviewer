@@ -48,6 +48,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
         self.image_path = ImagePath()
         self.image_canvas = ImageCanvas(self)
+        self.action_options = ActionOptions(self)
 
         self.setCentralWidget(self.image_canvas)  # fills the whole window
 
@@ -56,15 +57,13 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.totalTimeElapsed = QElapsedTimer()  # keep a track of the whole time spent in app
         self.totalTimeElapsed.start()
 
-        self.action_options = ActionOptions(self)
-
         self.timerLabel = QLabel()  # timer label
         self.timerLabel.setStyleSheet("font: 17pt; color: rgb(0, 180, 255)")  # set font size to 17 and color to blueish
         self.actionTimerLabel = self.toolBar.addWidget(self.timerLabel)  # add the timer label to the toolbar
 
         self.actionOpen.triggered.connect(self.get_directory)
         self.actionPlay.triggered.connect(self.toggle_slideshow)  # show image and start the timer
-        self.actionShuffle.triggered.connect(self.shuffle_list)  # make a shuffled list
+        self.actionShuffle.triggered.connect(self.shuffle)  # make a shuffled list
         self.actionNext.triggered.connect(self.next_image)
         self.actionPrevious.triggered.connect(self.previous_image)
         self.actionFullscreen.triggered.connect(self.toggle_fullscreen)  # toggle fullscreen
@@ -81,13 +80,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.timer_visible = False
         self.bars_displayed = True
 
-        self.current_index = 0
-        self.undo_shuffle_index = -1
-        self.previous_shuffle = []
-        self.all_files = []
-        self.current_image_path = "."
-
-        self.dirs = get_shelf('dirs', ["."])
+        self.dirs = get_shelf('dirs', ".")
         self.starred_images = get_shelf('stars', [])
         if self.starred_images:
             self.update_starred_images_menu()
@@ -101,83 +94,58 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         """
         Append the image directory to self.dirs
         """
-        self.dirs.append(QFileDialog.getExistingDirectory(self, "Open directory", dir=self.dirs[-1]))
-        self.dirs.pop(0)
+        self.dirs = QFileDialog.getExistingDirectory(self, "Open directory", dir=self.dirs)
         set_shelf('dirs', self.dirs)
-        if not self.dirs[-1] == '':  # '' is not a valid path
-            self.all_files = self.image_path.load(self.dirs[-1])
+        if self.dirs:  # '' is not a valid path
+            self.image_path._load_dir(self.dirs)
             self.action_options.enable_all_actions()
             self.next_image()
 
-    def update_image(self, image_path=None):
+    def update_image(self, path=None):
         """
         Update the graphicsview with image_path or current_image_path.
         """
-        if image_path:
-            self.image_canvas.draw_image(image_path)
-            self.current_image_path = image_path
-        elif self.current_image_path:
-            self.image_canvas.draw_image(self.current_image_path)
+        if path:
+            self.image_canvas.draw_image(path)
+            self.image_path.current = path
+        elif self.image_path.current:
+            self.image_canvas.draw_image(self.image_path.current)
 
     def prepare_image(self):
-        self.set_window_title(self.current_image_path)
-        if self.image_canvas.actionMirror.isChecked() or self.image_canvas.actionFlipUpDown.isChecked():
-            self.update_image()  # the graphicsview still stays rotated
-        else:
-            self.image_canvas.normal()  # update image and reset any transformations
+        self.set_window_title(self.image_path.current)
+        self.update_image()  # the graphicsview still stays rotated
 
     def next_image(self):
         """
         Update image with the next image in sequence.
         """
-        if not self.current_index + 1 > len(self.all_files):  # if we go through all files go back to start
-            self.current_index += 1
-        else:
-            self.current_index = 0
-
-        self.current_image_path = self.get_current_image_path()
+        self.image_path._next()
         self.timeElapsedTimer.set_time_to_zero()
         self.update_timerLabel()
         self.prepare_image()
 
-        if self.sound and self.is_playing:  # if the slide show is playing and the sound is on (called by timer timeout)
+        if self.sound and self.is_playing:
             self.beep()
 
     def previous_image(self):
         """
         Update image with the previous image in sequence.
         """
-        if not abs(self.current_index) + 1 > len(self.all_files):
-            self.current_index -= 1
-        else:
-            self.current_index = 0
-
-        self.timeElapsedTimer.set_time_to_zero()  # reset timer back to 0
-        self.update_timerLabel()  # immediately update
+        self.image_path._prev()
+        self.timeElapsedTimer.set_time_to_zero()
+        self.update_timerLabel()
         self.prepare_image()
 
-    def shuffle_list(self):
+    def shuffle(self):
         """
         Shuffle the current list of images. Also initialize the settings again.
         """
-        if len(self.previous_shuffle) > 10:
-            self.previous_shuffle.pop(0)
-        self.previous_shuffle.append(self.get_current_state())
-        self.undo_shuffle_index = -1
-        self.current_index = 0
-        self.all_files = random.sample(self.all_files, len(self.all_files))  # create a shuffled new list
+        self.image_path._shuffle()
         self.next_image()
 
     def undo_shuffle(self):
-        if abs(self.undo_shuffle_index) <= len(self.previous_shuffle):
-            all_files, current_index = self.previous_shuffle[self.undo_shuffle_index]
-            self.all_files = all_files
-            self.current_index = current_index
-            self.prepare_image()
-            self.undo_shuffle_index -= 1
-
-        if self.undo_shuffle_index < -9:
-            self.undo_shuffle_index = -9
+        self.image_path._undo_shuffle()
+        self.prepare_image()
 
     def _paint_background(self, qcolor, full_background=False):
         if full_background:
@@ -279,10 +247,10 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
                                 'Total time in app: ' + get_time_from_secs(self.totalTimeElapsed.elapsed() / 1000))
 
     def open_in_folder(self):
-        subprocess.Popen(r'explorer /select,{}'.format(self.current_image_path))
+        subprocess.Popen(r'explorer /select,{}'.format(self.image_path.current))
 
     def star_image(self):
-        self.starred_images.append(self.current_image_path)
+        self.starred_images.append(self.image_path.current)
         set_shelf('stars', self.starred_images)
         self.update_starred_images_menu()
 
@@ -327,18 +295,12 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
             self.action_options.enable_actions_for(self.action_options.image_actions)
 
         if action.text() == "Show":
-            self.update_image(image_path=action.data())
+            self.update_image(path=action.data())
         elif action.text() == "Unstar":
             self.starred_images.remove(action.data())
             self.update_starred_images_menu()
 
         self.set_window_title(action.data())
-
-    def get_current_state(self):
-        return self.all_files, self.current_index
-
-    def get_current_image_path(self):
-        return self.all_files[self.current_index]
 
     def contextMenuEvent(self, event):
         """Show a context menu on right click."""
@@ -367,29 +329,60 @@ class ImagePath:
         self.all_files = []
         self.current_image_path = "."
 
-    def next(self):
+    def _next(self):
+        if self.current_index + 1 > len(self.all_files):  # if we go through all files go back to start
+            self.current_index = 0
+        else:
+            self.current_index += 1
+
+        self.current = self.all_files[self.current_index]
+        return self.current
+
+    def _prev(self):
+        if not abs(self.current_index) + 1 > len(self.all_files):
+            self.current_index -= 1
+        else:
+            self.current_index = 0
+
+        self.current = self.all_files[self.current_index]
+        return self.current
+
+    def _random(self):
         pass
 
-    def prev(self):
-        pass
-
-    def random(self):
-        pass
-
+    @property
     def current(self):
-        pass
+        return self.current_image_path
 
-    def load(self, path):
-        self.all_files = [os.path.join(path, f) for f in scandir.listdir(path) if os.path.isfile(os.path.join(path, f))]
+    @current.setter
+    def current(self, value):
+        self.current_image_path = value
+
+    def _load_dir(self, path):
+        self.all_files = [os.path.abspath(os.path.join(path, img)) for img in scandir.listdir(path)
+                          if os.path.isfile(os.path.join(path, img))]
         return self.all_files
 
-    def mix(self, path):
-        pass
+    def _shuffle(self):
+        if len(self.previous_shuffle) > 10:
+            self.previous_shuffle.pop(0)
+        self.previous_shuffle.append((self.all_files, self.current_index))
+        self.undo_shuffle_index = -1
+        self.current_index = 0
+        self.all_files = random.sample(self.all_files, len(self.all_files))  # create a shuffled new list
 
-    # def get_next_image(self):
-    #     for root, dirs, files in scandir.walk(self.dirs[-1]):
-    #         for _file in files:
-    #             yield os.path.abspath(os.path.join(root, _file))
+    def _undo_shuffle(self):
+        if abs(self.undo_shuffle_index) <= len(self.previous_shuffle):
+            all_files, current_index = self.previous_shuffle[self.undo_shuffle_index]
+            self.all_files = all_files
+            self.current_index = current_index
+            self.undo_shuffle_index -= 1
+
+        if self.undo_shuffle_index < -9:
+            self.undo_shuffle_index = -9
+
+        self.current = self.all_files[self.current_index]
+
 
 class ActionOptions:
     def __init__(self, parent):
@@ -421,7 +414,7 @@ class ActionOptions:
         self.mw.addAction(self.mw.actionShuffle)
         self.mw.addAction(self.mw.actionSound)
         self.mw.addAction(self.mw.actionTimer)
-        self.mw.addAction(self.mw.actionPreviousShuffle)
+        self.mw.addAction(self.mw.actionUndoShuffle)
         self.mw.addAction(self.mw.actionStar)
 
     def create_actions(self):
@@ -453,10 +446,10 @@ class ActionOptions:
         self.mw.actionOpenInFolder = self.create_action("Open containing folder", self.mw,
                                                         triggered=self.mw.open_in_folder, enabled=False,
                                                         action_group=self.path_actions)
-        self.mw.actionPreviousShuffle = QAction("Undo shuffle", self.mw,
-                                                triggered=self.mw.undo_shuffle,
-                                                enabled=False,
-                                                shortcut=QKeySequence.fromString("Shift+F5"))
+        self.mw.actionUndoShuffle = QAction("Undo shuffle", self.mw,
+                                            triggered=self.mw.undo_shuffle,
+                                            enabled=False,
+                                            shortcut=QKeySequence.fromString("Shift+F5"))
         self.mw.actionStar = QAction("Star this image", self.mw,
                                      triggered=self.mw.star_image, enabled=False,
                                      shortcut=QKeySequence.fromString("Ctrl+D"))
@@ -484,7 +477,7 @@ class ActionOptions:
         self.mw.actionPrevious.setEnabled(True)
 
         self.mw.actionShuffle.setEnabled(True)
-        self.mw.actionPreviousShuffle.setEnabled(True)
+        self.mw.actionUndoShuffle.setEnabled(True)
 
         self.mw.actionSound.setEnabled(True)
         self.mw.actionTimer.setEnabled(True)
@@ -507,7 +500,7 @@ class ActionOptions:
         menu.addSeparator()
 
         menu.addAction(self.mw.actionShuffle)
-        menu.addAction(self.mw.actionPreviousShuffle)
+        menu.addAction(self.mw.actionUndoShuffle)
         menu.addAction(self.mw.actionSound)
         menu.addAction(self.mw.actionTimer)
         menu.addSeparator()
@@ -604,7 +597,7 @@ class ImageCanvas(QGraphicsView):
 
     def mirror(self):
         if self.actionMirror.isChecked():
-            self.setTransform(QTransform().rotate(180, Qt.YAxis))
+            self.setTransform(QTransform().rotate(180, Qt.YAxis), combine=True)
         else:
             self.normal()
 
@@ -618,6 +611,7 @@ class ImageCanvas(QGraphicsView):
         self.actionFlipUpDown.setChecked(False)
         self.actionMirror.setChecked(False)
         self.resetTransform()
+        self.fit_in_view()
 
     def wheelEvent(self, event):
         self.setTransformationAnchor(self.NoAnchor)
