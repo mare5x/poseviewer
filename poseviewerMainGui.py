@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'poseviewerMainGui.ui'
 #
-# Created: Tue Jun 16 13:38:54 2015
+# Created: Sat Jul  4 16:27:53 2015
 #      by: pyside-uic 0.2.15 running on PySide 1.2.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -61,12 +61,12 @@ class Ui_MainWindow(object):
         icon6.addPixmap(QtGui.QPixmap(":/Icons/next.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionNext.setIcon(icon6)
         self.actionNext.setObjectName("actionNext")
-        self.actionShuffle = QtGui.QAction(MainWindow)
-        self.actionShuffle.setEnabled(False)
+        self.actionRandom = QtGui.QAction(MainWindow)
+        self.actionRandom.setEnabled(False)
         icon7 = QtGui.QIcon()
         icon7.addPixmap(QtGui.QPixmap(":/Icons/shuffle.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.actionShuffle.setIcon(icon7)
-        self.actionShuffle.setObjectName("actionShuffle")
+        self.actionRandom.setIcon(icon7)
+        self.actionRandom.setObjectName("actionRandom")
         self.actionSound = QtGui.QAction(MainWindow)
         self.actionSound.setEnabled(False)
         icon8 = QtGui.QIcon()
@@ -91,7 +91,7 @@ class Ui_MainWindow(object):
         self.toolBar.addAction(self.actionPlay)
         self.toolBar.addAction(self.actionNext)
         self.toolBar.addSeparator()
-        self.toolBar.addAction(self.actionShuffle)
+        self.toolBar.addAction(self.actionRandom)
         self.toolBar.addAction(self.actionSound)
         self.toolBar.addAction(self.actionTimer)
         self.toolBar.addSeparator()
@@ -119,9 +119,9 @@ class Ui_MainWindow(object):
         self.actionNext.setText(QtGui.QApplication.translate("MainWindow", "Next image", None, QtGui.QApplication.UnicodeUTF8))
         self.actionNext.setToolTip(QtGui.QApplication.translate("MainWindow", "Next image (Right arrow)", None, QtGui.QApplication.UnicodeUTF8))
         self.actionNext.setShortcut(QtGui.QApplication.translate("MainWindow", "Right", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionShuffle.setText(QtGui.QApplication.translate("MainWindow", "Shuffle images", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionShuffle.setToolTip(QtGui.QApplication.translate("MainWindow", "Shuffle images", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionShuffle.setShortcut(QtGui.QApplication.translate("MainWindow", "F5", None, QtGui.QApplication.UnicodeUTF8))
+        self.actionRandom.setText(QtGui.QApplication.translate("MainWindow", "Pick random image", None, QtGui.QApplication.UnicodeUTF8))
+        self.actionRandom.setToolTip(QtGui.QApplication.translate("MainWindow", "Pick random image", None, QtGui.QApplication.UnicodeUTF8))
+        self.actionRandom.setShortcut(QtGui.QApplication.translate("MainWindow", "F5", None, QtGui.QApplication.UnicodeUTF8))
         self.actionSound.setText(QtGui.QApplication.translate("MainWindow", "Toggle sound effects during slideshow.", None, QtGui.QApplication.UnicodeUTF8))
         self.actionSound.setToolTip(QtGui.QApplication.translate("MainWindow", "Toggle sound effects during slideshow.", None, QtGui.QApplication.UnicodeUTF8))
         self.actionTimer.setText(QtGui.QApplication.translate("MainWindow", "Toggle timer display", None, QtGui.QApplication.UnicodeUTF8))

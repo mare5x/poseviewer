@@ -64,7 +64,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
         self.actionOpen.triggered.connect(self.get_directory)
         self.actionPlay.triggered.connect(self.toggle_slideshow)  # show image and start the timer
-        self.actionShuffle.triggered.connect(self.random)  # make a shuffled list
+        self.actionRandom.triggered.connect(self.random)  # make a shuffled list
         self.actionNext.triggered.connect(self.next_image)
         self.actionPrevious.triggered.connect(self.previous_image)
         self.actionFullscreen.triggered.connect(self.toggle_fullscreen)  # toggle fullscreen
@@ -135,15 +135,20 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.image_path.prev()
         self.prepare_image()
 
+    def shuffle(self):
+        self.image_path.shuffle()
+        self.next_image()
+
+    def previous_shuffle(self):
+        self.image_path.previous_shuffle()
+        self.prepare_image()
+
     def random(self):
-        """
-        Shuffle the current list of images. Also initialize the settings again.
-        """
         self.image_path.random()
         self.prepare_image()
 
-    def previousrandom(self):
-        self.image_path.previousrandom()
+    def previous_random(self):
+        self.image_path.previous_random()
         self.prepare_image()
 
     def paint_background(self, qcolor, full_background=False):
@@ -329,12 +334,15 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
 
 class ImagePath:
-    UNDO_SHUFFLE_LIMIT = 50
+    UNDO_SHUFFLE_LIMIT = 10
+    UNDO_RANDOM_LIMIT = 50
 
     def __init__(self):
         self.current_index = 0
+        self.undo_random_index = -1
         self.undo_shuffle_index = -1
-        self.previous_shuffle = []
+        self.previous_random_storage = []
+        self.previous_shuffle_storage = []
         self.all_files = []
         self.current_image_path = "."
 
@@ -345,7 +353,6 @@ class ImagePath:
             self.current_index += 1
 
         self.current = self.all_files[self.current_index]
-        return self.current
 
     def prev(self):
         if not abs(self.current_index) + 1 > len(self.all_files):
@@ -354,33 +361,40 @@ class ImagePath:
             self.current_index = 0
 
         self.current = self.all_files[self.current_index]
-        return self.current
 
     def shuffle(self):
-        pass
+        if len(self.previous_shuffle_storage) > self.UNDO_SHUFFLE_LIMIT:
+            self.previous_shuffle_storage.pop(0)
+        self.previous_shuffle_storage.append((self.all_files, self.current_index))
+        self.undo_shuffle_index = -1
+        self.current_index = 0
+        self.all_files = random.sample(self.all_files, len(self.all_files))
 
     def previous_shuffle(self):
-        pass
-
-    def random(self):
-        if len(self.previous_shuffle) > self.UNDO_SHUFFLE_LIMIT:
-            self.previous_shuffle.pop(0)
-
-        self.previous_shuffle.append(self.current)
-        self.current = random.choice(self.all_files)
-        self.undo_shuffle_index = -1
-
-        return self.current
-
-    def previousrandom(self):
-        if abs(self.undo_shuffle_index) <= len(self.previous_shuffle):
-            self.current = self.previous_shuffle[self.undo_shuffle_index]
+        if abs(self.undo_shuffle_index) <= len(self.previous_shuffle_storage):
+            self.all_files, self.current_index = self.previous_shuffle_storage[self.undo_shuffle_index]
             self.undo_shuffle_index -= 1
 
         if self.undo_shuffle_index < -(self.UNDO_SHUFFLE_LIMIT - 1):
             self.undo_shuffle_index = -(self.UNDO_SHUFFLE_LIMIT - 1)
 
-        return self.current
+        self.current = self.all_files[self.current_index]
+
+    def random(self):
+        if len(self.previous_random_storage) > self.UNDO_RANDOM_LIMIT:
+            self.previous_random_storage.pop(0)
+
+        self.previous_random_storage.append(self.current)
+        self.current = random.choice(self.all_files)
+        self.undo_random_index = -1
+
+    def previous_random(self):
+        if abs(self.undo_random_index) <= len(self.previous_random_storage):
+            self.current = self.previous_random_storage[self.undo_random_index]
+            self.undo_random_index -= 1
+
+        if self.undo_random_index < -(self.UNDO_RANDOM_LIMIT - 1):
+            self.undo_random_index = -(self.UNDO_RANDOM_LIMIT - 1)
 
     @property
     def current(self):
@@ -411,11 +425,15 @@ class ActionOptions:
         self.path_actions.addAction(self.mw.actionSpeed)
         self.path_actions.addAction(self.mw.actionFullscreen)
 
+        self.random_actions = QActionGroup(self.mw)
+        self.random_actions.addAction(self.mw.actionRandom)
+
         self.create_actions()
         self.add_actions()
 
     def add_actions(self):
         self.add_actions_to(self.path_actions, self.mw)
+        self.add_actions_to(self.random_actions, self.mw)
 
         self.mw.addAction(self.mw.actionSpeed)
         self.mw.addAction(self.mw.actionOpen)
@@ -423,10 +441,8 @@ class ActionOptions:
         self.mw.addAction(self.mw.actionPrevious)
         self.mw.addAction(self.mw.actionPlay)
         self.mw.addAction(self.mw.actionNext)
-        self.mw.addAction(self.mw.actionShuffle)
         self.mw.addAction(self.mw.actionSound)
         self.mw.addAction(self.mw.actionTimer)
-        self.mw.addAction(self.mw.actionPreviousRandom)
         self.mw.addAction(self.mw.actionStar)
 
     def create_actions(self):
@@ -460,10 +476,21 @@ class ActionOptions:
         self.mw.actionOpenInFolder = self.create_action("Open containing folder", self.mw,
                                                         triggered=self.mw.open_in_folder, enabled=False,
                                                         action_group=self.path_actions)
-        self.mw.actionPreviousRandom = QAction("Undo shuffle", self.mw,
-                                            triggered=self.mw.previousrandom,
-                                            enabled=False,
-                                            shortcut=QKeySequence.fromString("Shift+F5"))
+        # ------- random_actions -------
+        self.mw.actionPreviousRandom = self.create_action("Undo random", self.mw,
+                                                           triggered=self.mw.previous_random,
+                                                           enabled=False,
+                                                           shortcut=QKeySequence.fromString("Shift+F5"),
+                                                           action_group=self.random_actions)
+        self.mw.actionShuffle = self.create_action("Shuffle images", self.mw, triggered=self.mw.shuffle, enabled=False,
+                                                   shortcut=QKeySequence.fromString("Ctrl+F5"), action_group=self.random_actions)
+        self.mw.actionPreviousShuffle = self.create_action("Undo shuffle", self.mw,
+                                                            triggered=self.mw.previous_shuffle,
+                                                            enabled=False,
+                                                            shortcut=QKeySequence.fromString("Shift+Ctrl+F5"),
+                                                            action_group=self.random_actions)
+        # ------- /random_actions ------
+
         self.mw.actionStar = QAction("Star this image", self.mw,
                                      triggered=self.mw.star_image, enabled=False,
                                      shortcut=QKeySequence.fromString("Ctrl+D"))
@@ -490,12 +517,10 @@ class ActionOptions:
         self.mw.actionNext.setEnabled(True)
         self.mw.actionPrevious.setEnabled(True)
 
-        self.mw.actionShuffle.setEnabled(True)
-        self.mw.actionPreviousRandom.setEnabled(True)
-
         self.mw.actionSound.setEnabled(True)
         self.mw.actionTimer.setEnabled(True)
 
+        self.enable_actions_for(self.random_actions)
         self.enable_actions_for(self.image_actions)
 
         self.mw.actionOpenInFolder.setEnabled(True)
@@ -513,8 +538,7 @@ class ActionOptions:
         menu.addAction(self.mw.actionNext)
         menu.addSeparator()
 
-        menu.addAction(self.mw.actionShuffle)
-        menu.addAction(self.mw.actionPreviousRandom)
+        self.add_actions_to(self.random_actions, menu)
         menu.addAction(self.mw.actionSound)
         menu.addAction(self.mw.actionTimer)
         menu.addSeparator()
@@ -527,7 +551,7 @@ class ActionOptions:
 
         menu.addSeparator()
         menu.addAction(self.mw.actionStar)
-        stars_menu = menu.addMenu(self.stars_menu)
+        menu.addMenu(self.stars_menu)
 
         self.main_menu = menu
 

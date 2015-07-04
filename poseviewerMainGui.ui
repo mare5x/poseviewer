@@ -53,7 +53,7 @@
    <addaction name="actionPlay"/>
    <addaction name="actionNext"/>
    <addaction name="separator"/>
-   <addaction name="actionShuffle"/>
+   <addaction name="actionRandom"/>
    <addaction name="actionSound"/>
    <addaction name="actionTimer"/>
    <addaction name="separator"/>
@@ -154,7 +154,7 @@
     <string>Right</string>
    </property>
   </action>
-  <action name="actionShuffle">
+  <action name="actionRandom">
    <property name="enabled">
     <bool>false</bool>
    </property>
@@ -163,10 +163,10 @@
      <normaloff>:/Icons/shuffle.png</normaloff>:/Icons/shuffle.png</iconset>
    </property>
    <property name="text">
-    <string>Shuffle images</string>
+    <string>Pick random image</string>
    </property>
    <property name="toolTip">
-    <string>Shuffle images</string>
+    <string>Pick random image</string>
    </property>
    <property name="shortcut">
     <string>F5</string>
