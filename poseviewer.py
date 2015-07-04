@@ -64,7 +64,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
         self.actionOpen.triggered.connect(self.get_directory)
         self.actionPlay.triggered.connect(self.toggle_slideshow)  # show image and start the timer
-        self.actionShuffle.triggered.connect(self.shuffle)  # make a shuffled list
+        self.actionShuffle.triggered.connect(self.random)  # make a shuffled list
         self.actionNext.triggered.connect(self.next_image)
         self.actionPrevious.triggered.connect(self.previous_image)
         self.actionFullscreen.triggered.connect(self.toggle_fullscreen)  # toggle fullscreen
@@ -98,7 +98,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.dirs = QFileDialog.getExistingDirectory(self, "Open directory", dir=self.dirs)
         set_shelf('dirs', self.dirs)
         if self.dirs:  # '' is not a valid path
-            self.image_path._load_dir(self.dirs)
+            self.image_path.load_dir(self.dirs)
             self.action_options.enable_all_actions()
             self.next_image()
 
@@ -113,6 +113,8 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
             self.image_canvas.draw_image(self.image_path.current)
 
     def prepare_image(self):
+        self.timeElapsedTimer.set_time_to_zero()
+        self.update_timerLabel()
         self.set_window_title(self.image_path.current)
         self.update_image()  # the graphicsview still stays rotated
 
@@ -120,9 +122,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         """
         Update image with the next image in sequence.
         """
-        self.image_path._next()
-        self.timeElapsedTimer.set_time_to_zero()
-        self.update_timerLabel()
+        self.image_path.next()
         self.prepare_image()
 
         if self.sound and self.is_playing:
@@ -132,23 +132,21 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         """
         Update image with the previous image in sequence.
         """
-        self.image_path._prev()
-        self.timeElapsedTimer.set_time_to_zero()
-        self.update_timerLabel()
+        self.image_path.prev()
         self.prepare_image()
 
-    def shuffle(self):
+    def random(self):
         """
         Shuffle the current list of images. Also initialize the settings again.
         """
-        self.image_path._shuffle()
-        self.next_image()
-
-    def undo_shuffle(self):
-        self.image_path._undo_shuffle()
+        self.image_path.random()
         self.prepare_image()
 
-    def _paint_background(self, qcolor, full_background=False):
+    def previousrandom(self):
+        self.image_path.previousrandom()
+        self.prepare_image()
+
+    def paint_background(self, qcolor, full_background=False):
         if full_background:
             full_background = QPalette()
             full_background.setColor(self.backgroundRole(), qcolor)
@@ -164,13 +162,13 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         """
         if self.isFullScreen():  # go back to normal
             self.set_icon(":/Icons/fullscreen.png", self.actionFullscreen)
-            self._paint_background(Qt.NoBrush)
+            self.paint_background(Qt.NoBrush)
             self.setGeometry(self.window_dimensions)
             self.showNormal()
         else:  # go to fullscreen
             self.set_icon(":/Icons/closefullscreen.png", self.actionFullscreen)
             self.window_dimensions = self.geometry()  # save current window settings
-            self._paint_background(Qt.black, True)
+            self.paint_background(Qt.black, True)
             self.showFullScreen()
 
         self.update_image()  # update the image to fit the fullscreen mode
@@ -303,6 +301,14 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
         self.set_window_title(action.data())
 
+    def save_image(self):
+        file_name = QFileDialog.getSaveFileName(self, "Save image", self.dirs, "Images (*.BMP, *.JPG, *.JPEG, *.PNG)")[0]
+        if file_name:
+            if self.image_canvas.save(file_name):
+                QMessageBox.information(self, "Success", "Successfully saved image")
+            else:
+                QMessageBox.critical(self, "Failure", "An error occurred while trying to save the image.")
+
     def contextMenuEvent(self, event):
         """Show a context menu on right click."""
         menu = QMenu()
@@ -323,7 +329,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
 
 class ImagePath:
-    UNDO_SHUFFLE_LIMIT = 10
+    UNDO_SHUFFLE_LIMIT = 50
 
     def __init__(self):
         self.current_index = 0
@@ -332,7 +338,7 @@ class ImagePath:
         self.all_files = []
         self.current_image_path = "."
 
-    def _next(self):
+    def next(self):
         if self.current_index + 1 > len(self.all_files):  # if we go through all files go back to start
             self.current_index = 0
         else:
@@ -341,7 +347,7 @@ class ImagePath:
         self.current = self.all_files[self.current_index]
         return self.current
 
-    def _prev(self):
+    def prev(self):
         if not abs(self.current_index) + 1 > len(self.all_files):
             self.current_index -= 1
         else:
@@ -350,8 +356,31 @@ class ImagePath:
         self.current = self.all_files[self.current_index]
         return self.current
 
-    def _random(self):
+    def shuffle(self):
         pass
+
+    def previous_shuffle(self):
+        pass
+
+    def random(self):
+        if len(self.previous_shuffle) > self.UNDO_SHUFFLE_LIMIT:
+            self.previous_shuffle.pop(0)
+
+        self.previous_shuffle.append(self.current)
+        self.current = random.choice(self.all_files)
+        self.undo_shuffle_index = -1
+
+        return self.current
+
+    def previousrandom(self):
+        if abs(self.undo_shuffle_index) <= len(self.previous_shuffle):
+            self.current = self.previous_shuffle[self.undo_shuffle_index]
+            self.undo_shuffle_index -= 1
+
+        if self.undo_shuffle_index < -(self.UNDO_SHUFFLE_LIMIT - 1):
+            self.undo_shuffle_index = -(self.UNDO_SHUFFLE_LIMIT - 1)
+
+        return self.current
 
     @property
     def current(self):
@@ -361,28 +390,10 @@ class ImagePath:
     def current(self, value):
         self.current_image_path = value
 
-    def _load_dir(self, path):
+    def load_dir(self, path):
         self.all_files = [os.path.abspath(os.path.join(path, img)) for img in scandir.listdir(path)
                           if os.path.isfile(os.path.join(path, img))]
         return self.all_files
-
-    def _shuffle(self):
-        if len(self.previous_shuffle) > self.UNDO_SHUFFLE_LIMIT:
-            self.previous_shuffle.pop(0)
-        self.previous_shuffle.append((self.all_files, self.current_index))
-        self.undo_shuffle_index = -1
-        self.current_index = 0
-        self.all_files = random.sample(self.all_files, len(self.all_files))  # create a shuffled new list
-
-    def _undo_shuffle(self):
-        if abs(self.undo_shuffle_index) <= len(self.previous_shuffle):
-            self.all_files, self.current_index = self.previous_shuffle[self.undo_shuffle_index]
-            self.undo_shuffle_index -= 1
-
-        if self.undo_shuffle_index < -(self.UNDO_SHUFFLE_LIMIT - 1):
-            self.undo_shuffle_index = -(self.UNDO_SHUFFLE_LIMIT - 1)
-
-        self.current = self.all_files[self.current_index]
 
 
 class ActionOptions:
@@ -415,7 +426,7 @@ class ActionOptions:
         self.mw.addAction(self.mw.actionShuffle)
         self.mw.addAction(self.mw.actionSound)
         self.mw.addAction(self.mw.actionTimer)
-        self.mw.addAction(self.mw.actionUndoShuffle)
+        self.mw.addAction(self.mw.actionPreviousRandom)
         self.mw.addAction(self.mw.actionStar)
 
     def create_actions(self):
@@ -442,13 +453,15 @@ class ActionOptions:
         self.mw.image_canvas.actionNormal = self.create_action("Normal fit", self.mw,
                                                                triggered=self.mw.image_canvas.normal, enabled=False,
                                                                action_group=self.image_actions)
+        self.mw.image_canvas.actionSave = self.create_action("Save", self.mw, triggered=self.mw.save_image,
+                                                             enabled=False, action_group=self.image_actions)
         # ------- /image_actions -------
 
         self.mw.actionOpenInFolder = self.create_action("Open containing folder", self.mw,
                                                         triggered=self.mw.open_in_folder, enabled=False,
                                                         action_group=self.path_actions)
-        self.mw.actionUndoShuffle = QAction("Undo shuffle", self.mw,
-                                            triggered=self.mw.undo_shuffle,
+        self.mw.actionPreviousRandom = QAction("Undo shuffle", self.mw,
+                                            triggered=self.mw.previousrandom,
                                             enabled=False,
                                             shortcut=QKeySequence.fromString("Shift+F5"))
         self.mw.actionStar = QAction("Star this image", self.mw,
@@ -478,7 +491,7 @@ class ActionOptions:
         self.mw.actionPrevious.setEnabled(True)
 
         self.mw.actionShuffle.setEnabled(True)
-        self.mw.actionUndoShuffle.setEnabled(True)
+        self.mw.actionPreviousRandom.setEnabled(True)
 
         self.mw.actionSound.setEnabled(True)
         self.mw.actionTimer.setEnabled(True)
@@ -501,7 +514,7 @@ class ActionOptions:
         menu.addSeparator()
 
         menu.addAction(self.mw.actionShuffle)
-        menu.addAction(self.mw.actionUndoShuffle)
+        menu.addAction(self.mw.actionPreviousRandom)
         menu.addAction(self.mw.actionSound)
         menu.addAction(self.mw.actionTimer)
         menu.addSeparator()
@@ -614,6 +627,10 @@ class ImageCanvas(QGraphicsView):
         self.resetTransform()
         self.fit_in_view()
 
+    def save(self, file_name):
+        pix = QPixmap.grabWidget(self)
+        return pix.save(file_name)
+
     def wheelEvent(self, event):
         self.setTransformationAnchor(self.NoAnchor)
         self.setResizeAnchor(self.NoAnchor)
@@ -645,3 +662,13 @@ if __name__ == '__main__':
 # TODO fix, so the app shows the correct icon in the taskbar
 # TODO draw tool
 # TODO save image (with transformation applied)
+# TODO delete option
+# full shuffle and random
+
+# def get_img(path, index):
+#     if index >= len(scandir.listdir(path)):
+#         index -= len(scandir.listdir(path))
+
+#     for i, j in enumerate(scandir.listdir(path)):
+#         if i == index:
+#             return j
