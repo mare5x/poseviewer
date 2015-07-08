@@ -49,9 +49,19 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
         self.image_path = ImagePath()
         self.image_canvas = ImageCanvas(self)
+        self.images_viewer = ImageViewer(parent=self)
         self.action_options = ActionOptions(self)
 
-        self.setCentralWidget(self.image_canvas)  # fills the whole window
+        # layout = QGridLayout()
+        self.gridLayout.addWidget(self.image_canvas)
+        self.gridLayout.addWidget(self.images_viewer)
+        self.window = QWidget()
+        self.window.setLayout(self.gridLayout)
+
+        # self.setCentralWidget(self.image_canvas)  # fills the whole window
+        self.setCentralWidget(self.window)
+
+        self.images_viewer.indexDoubleClicked.connect(self.prepare_image)
 
         self.slideshowTimer = QTimer()  # make a timer ready to be used
         self.timeElapsedTimer = TimeElapsedThread(self)
@@ -112,11 +122,11 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         elif self.image_path.current:
             self.image_canvas.draw_image(self.image_path.current)
 
-    def prepare_image(self):
+    def prepare_image(self, path=None):
         self.timeElapsedTimer.set_time_to_zero()
         self.update_timerLabel()
         self.set_window_title(self.image_path.current)
-        self.update_image()  # the graphicsview still stays rotated
+        self.update_image(path)  # the graphicsview still stays rotated
 
     def next_image(self):
         """
@@ -151,6 +161,14 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.image_path.previous_random()
         self.prepare_image()
 
+    def show_stars_viewer(self):
+        self.images_viewer.set_image_list(self.starred_images)
+        self.images_viewer.display()
+
+    def show_all_viewer(self):
+        self.images_viewer.set_image_list(self.image_path.all_files)
+        self.images_viewer.display()
+
     def paint_background(self, qcolor, full_background=False):
         if full_background:
             full_background = QPalette()
@@ -184,36 +202,33 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         if self.is_playing:  # if it's playing, stop it
             self.set_icon(":/Icons/play.png", self.actionPlay)
             self.stop_slideshowTimer()
-            self.is_playing = False
         else:  # if it's not playing, play it
             self.beep()
             self.set_icon(":/Icons/pause.png", self.actionPlay)
             self.next_image()
             self.start_slideshowTimer()
-            self.is_playing = True
+        self.is_playing = not self.is_playing
 
     def toggle_sound(self):
         """
         Toggle whether there should be a beep during a slideshow.
         """
         if self.sound:  # sound is on and you stop it
-            self.sound = False
             self.set_icon(":/Icons/soundoff.png", self.actionSound)
         else:  # sound is not on and you put it on
-            self.sound = True
             self.set_icon(":/Icons/soundon.png", self.actionSound)
+        self.sound = not self.sound
 
     def toggle_label_timer(self):
         """
         Toggle whether the timerLabel should be displayed.
         """
         if self.timer_visible:
-            self.timer_visible = False
             self.actionTimerLabel.setVisible(False)
         else:
             self.actionTimerLabel.setVisible(True)
-            self.timer_visible = True
             self.timeElapsedTimer.start()
+        self.timer_visible = not self.timer_visible
 
         self.update_timerLabel()
         self.timeElapsedTimer.set_time_to_zero()
@@ -224,10 +239,9 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         """
         if self.bars_displayed:
             self.toolBar.hide()
-            self.bars_displayed = False
         else:
             self.toolBar.show()
-            self.bars_displayed = True
+        self.bars_displayed = not self.bars_displayed
 
         self.update_image()
 
@@ -428,12 +442,15 @@ class ActionOptions:
         self.random_actions = QActionGroup(self.mw)
         self.random_actions.addAction(self.mw.actionRandom)
 
+        self.stars_actions = QActionGroup(self.mw)
+
         self.create_actions()
         self.add_actions()
 
     def add_actions(self):
         self.add_actions_to(self.path_actions, self.mw)
         self.add_actions_to(self.random_actions, self.mw)
+        self.add_actions_to(self.stars_actions, self.mw)
 
         self.mw.addAction(self.mw.actionSpeed)
         self.mw.addAction(self.mw.actionOpen)
@@ -443,7 +460,6 @@ class ActionOptions:
         self.mw.addAction(self.mw.actionNext)
         self.mw.addAction(self.mw.actionSound)
         self.mw.addAction(self.mw.actionTimer)
-        self.mw.addAction(self.mw.actionStar)
 
     def create_actions(self):
         self.mw.actionStats = QAction("Run time", self.mw,
@@ -473,9 +489,17 @@ class ActionOptions:
                                                              enabled=False, action_group=self.image_actions)
         # ------- /image_actions -------
 
+        # ------- path_actions ---------
         self.mw.actionOpenInFolder = self.create_action("Open containing folder", self.mw,
                                                         triggered=self.mw.open_in_folder, enabled=False,
                                                         action_group=self.path_actions)
+
+        self.mw.actionViewImages = self.create_action("View the current list of images", self.mw,
+                                                       triggered=self.mw.show_all_viewer, enabled=True,
+                                                       shortcut=QKeySequence.fromString("Alt+D"),
+                                                       action_group=self.path_actions)
+        # ------- /path_actions --------
+
         # ------- random_actions -------
         self.mw.actionPreviousRandom = self.create_action("Undo random", self.mw,
                                                            triggered=self.mw.previous_random,
@@ -491,9 +515,15 @@ class ActionOptions:
                                                             action_group=self.random_actions)
         # ------- /random_actions ------
 
-        self.mw.actionStar = QAction("Star this image", self.mw,
-                                     triggered=self.mw.star_image, enabled=False,
-                                     shortcut=QKeySequence.fromString("Ctrl+D"))
+        # ------- stars_actions --------
+        self.mw.actionStar = self.create_action("Star this image", self.mw,
+                                                 triggered=self.mw.star_image, enabled=False,
+                                                 shortcut=QKeySequence.fromString("Ctrl+D"), action_group=self.stars_actions)
+
+        self.mw.actionOpenStars = self.create_action("View starred images", self.mw, triggered=self.mw.show_stars_viewer,
+                                                      enabled=True, shortcut=QKeySequence.fromString("Ctrl+Alt+D"),
+                                                      action_group=self.stars_actions)
+        # ------- /stars_actions -------
 
     def create_action(self, *args, **kwargs):
         """Construct an action and add it to an action_group."""
@@ -522,13 +552,12 @@ class ActionOptions:
 
         self.enable_actions_for(self.random_actions)
         self.enable_actions_for(self.image_actions)
-
-        self.mw.actionOpenInFolder.setEnabled(True)
-        self.mw.actionStar.setEnabled(True)
+        self.enable_actions_for(self.stars_actions)
+        self.enable_actions_for(self.path_actions)
 
     def add_to_context_menu(self, menu):
         menu.addAction(self.mw.actionOpen)
-        menu.addAction(self.mw.actionOpenInFolder)
+        self.add_actions_to(self.path_actions, menu)
         menu.addAction(self.mw.actionSpeed)
         menu.addAction(self.mw.actionFullscreen)
         menu.addSeparator()
@@ -550,7 +579,7 @@ class ActionOptions:
         menu.addAction(self.mw.actionBars)
 
         menu.addSeparator()
-        menu.addAction(self.mw.actionStar)
+        self.add_actions_to(self.stars_actions, menu)
         menu.addMenu(self.stars_menu)
 
         self.main_menu = menu
@@ -671,6 +700,50 @@ class ImageCanvas(QGraphicsView):
         self.translate(delta.x(), delta.y())
 
 
+class ImageViewer(QSplitter):
+    indexDoubleClicked = Signal(str)
+
+    def __init__(self, parent=None, image_list=None):
+        super().__init__(parent)
+
+        self.image_list = image_list
+        self.model = QStringListModel(self.image_list)
+
+        self.list_view = QListView(self)
+        self.list_view.setModel(self.model)
+        self.list_view.clicked.connect(self.paint)
+        self.list_view.doubleClicked.connect(self.apply_index)
+
+        self.canvas = ImageCanvas(self)
+
+        # other side shows preview
+        # double click to set the image to mainwindow and close this widget
+        # option to "play all" ( set all images in view to all_files )
+        self.setChildrenCollapsible(False)
+        self.resize(parent.size())
+        self.setSizes([400, 600])
+
+        self.hide()
+        self.is_displayed = False
+
+    @Slot()
+    def display(self):
+        if self.is_displayed:
+            self.hide()
+        else:
+            self.show()
+        self.is_displayed = not self.is_displayed
+
+    def set_image_list(self, image_list):
+        self.model.setStringList(image_list)
+
+    def paint(self, index):
+        self.canvas.draw_image(self.model.data(index, 0))
+
+    def apply_index(self, index):
+        self.indexDoubleClicked.emit(self.model.data(index, 0))
+
+
 if __name__ == '__main__':
     myappid = 'Marko.Poseviewer.python.1'
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
@@ -687,7 +760,6 @@ if __name__ == '__main__':
 # TODO draw tool
 # TODO save image (with transformation applied)
 # TODO delete option
-# full shuffle and random
 
 # def get_img(path, index):
 #     if index >= len(scandir.listdir(path)):
