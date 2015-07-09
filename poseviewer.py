@@ -49,19 +49,22 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
         self.image_path = ImagePath()
         self.image_canvas = ImageCanvas(self)
-        self.images_viewer = ImageViewer(parent=self)
+        self.list_image_viewer = ListImageViewer(parent=self)
         self.action_options = ActionOptions(self)
 
         # layout = QGridLayout()
         self.gridLayout.addWidget(self.image_canvas)
-        self.gridLayout.addWidget(self.images_viewer)
+        self.gridLayout.addWidget(self.list_image_viewer)
         self.window = QWidget()
         self.window.setLayout(self.gridLayout)
 
         # self.setCentralWidget(self.image_canvas)  # fills the whole window
         self.setCentralWidget(self.window)
 
-        self.images_viewer.indexDoubleClicked.connect(self.prepare_image)
+        self.list_image_viewer.indexDoubleClicked.connect(self.prepare_image)
+        self.list_image_viewer.listImageViewerToggled.connect(self.image_canvas.fit_in_view)
+        self.list_image_viewer.starImage.connect(self.star_image)
+        self.list_image_viewer.setDefaultSequence.connect(self.set_sequence)
 
         self.slideshowTimer = QTimer()  # make a timer ready to be used
         self.timeElapsedTimer = TimeElapsedThread(self)
@@ -83,6 +86,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.actionTimer.triggered.connect(self.toggle_label_timer)  # toggle timer display
 
         self.timeElapsedTimer.secElapsed.connect(self.update_timerLabel)  # update the timer label every second
+        self.timeElapsedTimer.finished.connect(self.timeElapsedTimer.deleteLater)
         self.slideshowTimer.timeout.connect(self.next_image)  # every slide_speed seconds show image
 
         self.is_playing = False  # is the slideshow playing
@@ -93,8 +97,6 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
         self.dirs = get_shelf('dirs', ".")
         self.starred_images = get_shelf('stars', [])
-        if self.starred_images:
-            self.update_starred_images_menu()
 
         self.action_options.enable_actions_for(self.action_options.path_actions)
 
@@ -162,12 +164,12 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.prepare_image()
 
     def show_stars_viewer(self):
-        self.images_viewer.set_image_list(self.starred_images)
-        self.images_viewer.display()
+        self.list_image_viewer.set_image_list(self.starred_images)
+        self.list_image_viewer.display()
 
     def show_all_viewer(self):
-        self.images_viewer.set_image_list(self.image_path.all_files)
-        self.images_viewer.display()
+        self.list_image_viewer.set_image_list(self.image_path.sequence)
+        self.list_image_viewer.display()
 
     def paint_background(self, qcolor, full_background=False):
         if full_background:
@@ -223,12 +225,10 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         """
         Toggle whether the timerLabel should be displayed.
         """
-        if self.timer_visible:
-            self.actionTimerLabel.setVisible(False)
-        else:
-            self.actionTimerLabel.setVisible(True)
+        if not self.timer_visible:
             self.timeElapsedTimer.start()
         self.timer_visible = not self.timer_visible
+        self.actionTimerLabel.setVisible(self.timer_visible)
 
         self.update_timerLabel()
         self.timeElapsedTimer.set_time_to_zero()
@@ -267,24 +267,18 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
     def open_in_folder(self):
         subprocess.Popen(r'explorer /select,{}'.format(self.image_path.current))
 
-    def star_image(self):
-        self.starred_images.append(self.image_path.current)
-        set_shelf('stars', self.starred_images)
-        self.update_starred_images_menu()
+    def star_image(self, path=None, star=True):
+        if path is None:
+            path = self.image_path.current
 
-    def update_starred_images_menu(self):
-        stars_menu = QMenu("Starred images")
-        for star in self.starred_images:
-            each_star_menu = QMenu(star)
-            show_act = QAction("Show", each_star_menu)
-            show_act.setData(star)
-            each_star_menu.addAction(show_act)
-            unstar_act = QAction("Unstar", each_star_menu)
-            unstar_act.setData(star)
-            each_star_menu.addAction(unstar_act)
-            stars_menu.addMenu(each_star_menu)
-        self.action_options.stars_menu = stars_menu
-        return stars_menu
+        if star and path not in self.starred_images:
+            self.starred_images.append(path)
+        elif not star:
+            self.starred_images.remove(path)
+
+        set_shelf('stars', self.starred_images)
+        if not self.list_image_viewer.model.stringList() == self.image_path.sequence:
+            self.list_image_viewer.set_image_list(self.starred_images)
 
     def set_window_title(self, title):
         if os.path.isfile(title):
@@ -307,18 +301,9 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         icon.addPixmap(QPixmap(path), QIcon.Normal, QIcon.Off)
         target.setIcon(icon)
 
-    def get_starred_image(self, action):
-        self.action_options.stars_menu.triggered.disconnect(self.get_starred_image)
-        if self.action_options.image_actions.isEnabled():
-            self.action_options.enable_actions_for(self.action_options.image_actions)
-
-        if action.text() == "Show":
-            self.update_image(path=action.data())
-        elif action.text() == "Unstar":
-            self.starred_images.remove(action.data())
-            self.update_starred_images_menu()
-
-        self.set_window_title(action.data())
+    def set_sequence(self, seq):
+        self.image_path.sequence = seq
+        self.prepare_image()
 
     def save_image(self):
         file_name = QFileDialog.getSaveFileName(self, "Save image", self.dirs, "Images (*.BMP, *.JPG, *.JPEG, *.PNG)")[0]
@@ -332,7 +317,6 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         """Show a context menu on right click."""
         menu = QMenu()
         self.action_options.add_to_context_menu(menu)
-        self.action_options.stars_menu.triggered.connect(self.get_starred_image)
         menu.exec_(event.globalPos())  # show menu at mouse position
 
     def resizeEvent(self, event):
@@ -342,7 +326,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.image_canvas.fit_in_view()
 
     def closeEvent(self, event):
-        self.timeElapsedTimer.exit()
+        self.timeElapsedTimer.quit()
         set_shelf('stars', self.starred_images)  # save starred_images
         event.accept()  # close app
 
@@ -357,49 +341,49 @@ class ImagePath:
         self.undo_shuffle_index = -1
         self.previous_random_storage = []
         self.previous_shuffle_storage = []
-        self.all_files = []
-        self.current_image_path = "."
+        self._sequence = []
+        self.current_image_path = ""
 
     def next(self):
-        if self.current_index + 1 > len(self.all_files):  # if we go through all files go back to start
+        if self.current_index + 1 > len(self.sequence):  # if we go through all files go back to start
             self.current_index = 0
         else:
             self.current_index += 1
 
-        self.current = self.all_files[self.current_index]
+        self.current = self.sequence[self.current_index]
 
     def prev(self):
-        if not abs(self.current_index) + 1 > len(self.all_files):
+        if not abs(self.current_index) + 1 > len(self.sequence):
             self.current_index -= 1
         else:
             self.current_index = 0
 
-        self.current = self.all_files[self.current_index]
+        self.current = self.sequence[self.current_index]
 
     def shuffle(self):
         if len(self.previous_shuffle_storage) > self.UNDO_SHUFFLE_LIMIT:
             self.previous_shuffle_storage.pop(0)
-        self.previous_shuffle_storage.append((self.all_files, self.current_index))
+        self.previous_shuffle_storage.append((self.sequence, self.current_index))
         self.undo_shuffle_index = -1
         self.current_index = 0
-        self.all_files = random.sample(self.all_files, len(self.all_files))
+        self.sequence = random.sample(self.sequence, len(self.sequence))
 
     def previous_shuffle(self):
         if abs(self.undo_shuffle_index) <= len(self.previous_shuffle_storage):
-            self.all_files, self.current_index = self.previous_shuffle_storage[self.undo_shuffle_index]
+            self.sequence, self.current_index = self.previous_shuffle_storage[self.undo_shuffle_index]
             self.undo_shuffle_index -= 1
 
         if self.undo_shuffle_index < -(self.UNDO_SHUFFLE_LIMIT - 1):
             self.undo_shuffle_index = -(self.UNDO_SHUFFLE_LIMIT - 1)
 
-        self.current = self.all_files[self.current_index]
+        self.current = self.sequence[self.current_index]
 
     def random(self):
         if len(self.previous_random_storage) > self.UNDO_RANDOM_LIMIT:
             self.previous_random_storage.pop(0)
 
         self.previous_random_storage.append(self.current)
-        self.current = random.choice(self.all_files)
+        self.current = random.choice(self.sequence)
         self.undo_random_index = -1
 
     def previous_random(self):
@@ -418,17 +402,26 @@ class ImagePath:
     def current(self, value):
         self.current_image_path = value
 
+    @property
+    def sequence(self):
+        return self._sequence
+
+    @sequence.setter
+    def sequence(self, value):
+        self._sequence = value
+        self.current_index = 0
+        self.current_image_path = self.sequence[self.current_index]
+
     def load_dir(self, path):
-        self.all_files = [os.path.abspath(os.path.join(path, img)) for img in scandir.listdir(path)
+        self.sequence = [os.path.abspath(os.path.join(path, img)) for img in scandir.listdir(path)
                           if os.path.isfile(os.path.join(path, img))]
-        return self.all_files
+        return self.sequence
 
 
 class ActionOptions:
     def __init__(self, parent):
         self.mw = parent
 
-        self.stars_menu = QMenu("Starred images")
         self.main_menu = QMenu()
 
         self.image_actions = QActionGroup(self.mw)
@@ -580,7 +573,6 @@ class ActionOptions:
 
         menu.addSeparator()
         self.add_actions_to(self.stars_actions, menu)
-        menu.addMenu(self.stars_menu)
 
         self.main_menu = menu
 
@@ -646,8 +638,10 @@ class ImageCanvas(QGraphicsView):
         self.setScene(self.imageScene)  # apply scene to view
         self.show()  # show image
 
-    def draw_image(self, image):
+    def draw_image(self, image, size=None):
         pix_image = QPixmap(image)  # make pixmap
+        if size:
+            pix_image = pix_image.scaled(size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
         self.pix_item.setPixmap(pix_image)
         self.setSceneRect(QRectF(0.0, 0.0, pix_image.width(),
                                  pix_image.height()))  # update the rect so it isn't retarded like by default -- center image
@@ -700,8 +694,11 @@ class ImageCanvas(QGraphicsView):
         self.translate(delta.x(), delta.y())
 
 
-class ImageViewer(QSplitter):
+class ListImageViewer(QSplitter):
     indexDoubleClicked = Signal(str)
+    listImageViewerToggled= Signal()
+    starImage = Signal(str, bool)
+    setDefaultSequence= Signal(list)
 
     def __init__(self, parent=None, image_list=None):
         super().__init__(parent)
@@ -715,10 +712,21 @@ class ImageViewer(QSplitter):
         self.list_view.doubleClicked.connect(self.apply_index)
 
         self.canvas = ImageCanvas(self)
+        self.image_path = ""
 
-        # other side shows preview
-        # double click to set the image to mainwindow and close this widget
-        # option to "play all" ( set all images in view to all_files )
+        self.star_image_button = QPushButton("Star image")
+        self.unstar_image_button = QPushButton("Unstar image")
+        self.set_default_sequence = QPushButton("Play all images")
+
+        self.button_box = QDialogButtonBox(Qt.Vertical, self)
+        self.button_box.addButton(self.star_image_button, QDialogButtonBox.ActionRole)
+        self.button_box.addButton(self.unstar_image_button, QDialogButtonBox.ActionRole)
+        self.button_box.addButton(self.set_default_sequence, QDialogButtonBox.ActionRole)
+
+        self.star_image_button.clicked.connect(lambda: self.starImage.emit(self.image_path, True))
+        self.unstar_image_button.clicked.connect(lambda: self.starImage.emit(self.image_path, False))
+        self.set_default_sequence.clicked.connect(lambda: self.setDefaultSequence.emit(self.model.stringList()))
+
         self.setChildrenCollapsible(False)
         self.resize(parent.size())
         self.setSizes([400, 600])
@@ -733,12 +741,14 @@ class ImageViewer(QSplitter):
         else:
             self.show()
         self.is_displayed = not self.is_displayed
+        QTimer.singleShot(0, self.listImageViewerToggled.emit) # waits for widget to show/hide before emitting
 
     def set_image_list(self, image_list):
         self.model.setStringList(image_list)
 
     def paint(self, index):
-        self.canvas.draw_image(self.model.data(index, 0))
+        self.image_path = self.model.data(index, 0)
+        self.canvas.draw_image(self.image_path, self.canvas.size())  # scale to canvas size
 
     def apply_index(self, index):
         self.indexDoubleClicked.emit(self.model.data(index, 0))
