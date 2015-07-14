@@ -13,6 +13,10 @@ import shelve
 import poseviewerMainGui
 
 
+SUPPORTED_FORMATS_FILTER = ["*.BMP", "*.GIF", "*.JPG", "*.JPEG", "*.PNG", "*.PBM", "*.PGM", "*.PPM", "*.XBM", "*.XPM"]
+SUPPORTED_FORMATS_EXTENSIONS = (".bmp", ".gif", ".jpg", ".jpeg", ".png", ".pbm", ".pgm", ".ppm", ".xbm", ".xpm")
+
+
 def get_shelf(key, fallback=None):
     try:
         with shelve.open('settings') as db:
@@ -695,7 +699,8 @@ class ListImageViewer(QSplitter):
         super().__init__(parent)
 
         self.string_list_model = QStringListModel()
-        self.files_system_model = QFileSystemModel()
+        self.files_system_model = QFileSystemModel(nameFilterDisables=False)
+        self.files_system_model.setNameFilters(SUPPORTED_FORMATS_FILTER)
         self.files_system_model.setRootPath(path)
 
         self.tree_view = QTreeView(self)
@@ -752,10 +757,22 @@ class ListImageViewer(QSplitter):
     def apply_index(self, index):
         self.indexDoubleClicked.emit(self.canvas.image_path)
 
+    def get_selected(self):
+        selection = []
+        for index in self.tree_view.selectedIndexes():
+            if index.column() == 0:
+                path = os.path.abspath(self.files_system_model.filePath(index))
+                if os.path.isdir(path):
+                    selection.extend([os.path.join(path, p) for p in scandir.listdir(path) if p.endswith(SUPPORTED_FORMATS_EXTENSIONS)
+                                      and os.path.join(path, p) not in selection])
+                else:
+                    selection.append(path)
+        return selection
+
     def load_selected(self):
         if self.tree_view.model() == self.files_system_model:
-            selection = [self.files_system_model.filePath(index) for index in self.tree_view.selectedIndexes() if
-                         index.column() == 0]
+            selection = self.get_selected()
+
             QTimer.singleShot(0, lambda: self.setDefaultSequence.emit(selection))
         else:
             QTimer.singleShot(0, lambda: self.setDefaultSequence.emit(self.string_list_model.stringList()))
