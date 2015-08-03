@@ -179,3 +179,62 @@ class ListImageViewer(QSplitter):
             QTimer.singleShot(0, lambda: self.setDefaultSequence.emit(selection))
         else:
             QTimer.singleShot(0, lambda: self.setDefaultSequence.emit(self.string_list_model.stringList()))
+
+
+class SlideshowSettings(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.setWindowTitle("Slideshow Settings")
+        self.setMinimumSize(300, 150)
+
+        layout = QGridLayout(self)
+
+        speed_label = QLabel("Enter slideshow speed:", self)
+        self.speed_spinner = QSpinBox(parent=self, minimum=1, value=30, singleStep=5, suffix=" s")
+
+        self.increment_checkbox = QCheckBox("Increment slideshow speed?", self, checked=False)
+
+        increment = QWidget(self)
+        increment_layout = QGridLayout(increment)
+        increment_label = QLabel("Enter increment interval:", self)
+        self.increment_interval = QSpinBox(parent=self, minimum=1, value=5)
+        increment_layout.addWidget(increment_label, 0, 0)
+        increment_layout.addWidget(self.increment_interval, 0, 1)
+        increment.setLayout(increment_layout)
+        increment.hide()
+        self.increment_checkbox.toggled.connect(lambda: increment.setVisible(not increment.isVisible()))
+
+        layout.addWidget(speed_label, 0, 0)
+        layout.addWidget(self.speed_spinner, 0, 1)
+        layout.addWidget(self.increment_checkbox)
+        layout.addWidget(increment, 2, 0)
+
+        self._speed = 30
+        self.increment_index = 0
+        self.speed_index = 0
+        
+    def get_speed(self):
+        self.exec_()
+        self.speed = self.speed_spinner.value()
+        return self.speed
+
+    @property
+    def speed(self):
+        self._speed = self.speed_spinner.value()
+        return self._speed
+
+    @speed.setter
+    def speed(self, value):
+        self._speed = value
+
+    def increment_speed(self):
+        if increment_index >= increment_interval:
+            self.speed *= 2 ** speed_index
+            self.increment_index = 0
+            self.increment_interval -= 1
+            self.speed_index += 1
+        increment_index += 1
+
+        return speed
+        

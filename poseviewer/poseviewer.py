@@ -23,6 +23,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.image_canvas = ImageCanvas(self)
         self.list_image_viewer = ListImageViewer(parent=self)
         self.action_options = ActionOptions(self)
+        self.slideshow_settings = SlideshowSettings(self)
 
         self.gridLayout.addWidget(self.image_canvas)
         self.gridLayout.addWidget(self.list_image_viewer)
@@ -65,7 +66,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
         self.slideshow_active = False  # is the slideshow playing
         self.sound = True  # is the sound turned on
-        self.slide_speed = 30
+        self.slide_speed = self.slideshow_settings.speed
         self.timer_visible = False
         self.force_toolbar_display = False
         
@@ -118,6 +119,9 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
         if self.sound and self.slideshow_active:
             self.beep()
+
+        if self.slideshow_settings.increment_checkbox.isChecked():
+            self.start_slideshowTimer(self.slideshow_settings.increment_speed())
 
     def paint_background(self, qcolor, full_background=False):
         if full_background:
@@ -192,8 +196,11 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
         self.update_image()
 
-    def start_slideshowTimer(self):
-        self.slideshowTimer.start(self.slide_speed * 1000)  # ms to s
+    def start_slideshowTimer(self, speed=0):
+        if speed:
+            self.slideshowTimer.start(speed * 1000)  # ms to s
+        else:
+            self.slideshowTimer.start(self.slide_speed * 1000)
 
     def stop_slideshowTimer(self):
         self.slideshowTimer.stop()
@@ -238,11 +245,13 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         """
         Set the slideshow speed by opening a inputdialog.
         """
-        slide_speed = QInputDialog()
-        self.slide_speed = slide_speed.getInt(self, "Slideshow speed",
-                                              "Enter slideshow speed (seconds): ",
-                                              value=30, minValue=1)[0]
+        #slide_speed = QInputDialog()
+        #self.slide_speed = slide_speed.getInt(self, "Slideshow speed",
+        #                                      "Enter slideshow speed (seconds): ",
+        #                                      value=30, minValue=1)[0]
         # return type: (int, bool)
+
+        self.slide_speed = self.slideshow_settings.get_speed()
 
     def set_icon(self, path, target):
         icon = QIcon()

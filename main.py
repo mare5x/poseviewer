@@ -1,4 +1,4 @@
-from poseviewer import run
+﻿from poseviewer import run
 
 if __name__ == '__main__':
     run()
@@ -10,7 +10,6 @@ if __name__ == '__main__':
 # TODO save image (with transformation applied)
 # TODO delete option
 # TODO implement incremental sequence slideshow
-# TODO on full screen auto hide everything and show it only when hovering over it with the mouse
 
 # def get_img(path, index):
 #     if index >= len(scandir.listdir(path)):
