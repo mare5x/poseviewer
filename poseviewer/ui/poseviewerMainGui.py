@@ -127,4 +127,4 @@ class Ui_MainWindow(object):
         self.actionTimer.setText(QtGui.QApplication.translate("MainWindow", "Toggle timer display", None, QtGui.QApplication.UnicodeUTF8))
         self.actionTimer.setToolTip(QtGui.QApplication.translate("MainWindow", "Toggle timer display", None, QtGui.QApplication.UnicodeUTF8))
 
-import icons_rc
+from . import icons_rc
