@@ -1,8 +1,9 @@
-from PySide.QtCore import *
+﻿from PySide.QtCore import *
 from PySide.QtGui import *
 import os
 import scandir
 import random
+from .imageloader import *
 
 
 def get_time_from_secs(secs, pretty=True):
@@ -47,6 +48,8 @@ class ImagePath(QObject):
         self.previous_shuffle_storage = []
         self._sequence = []
         self.current_image_path = ""
+
+        self.image_loader_thread = ImageLoaderThread(sequence=self._sequence)
 
     def next(self):
         if self.current_index + 1 >= len(self.sequence):  # if we go through all files go back to start
@@ -121,14 +124,29 @@ class ImagePath(QObject):
         if value != self.sequence:
             QTimer.singleShot(0, self.sequenceChanged.emit)
 
-        self._sequence = value
-        self.current_index = 0
-        self.current = self.sequence[self.current_index]
+        stop_thread(self.image_loader_thread)
 
-    def load_dir(self, path):
-        self.sequence = [os.path.abspath(os.path.join(path, img)) for img in scandir.listdir(path)
-                         if os.path.isfile(os.path.join(path, img))]
-        return self.sequence
+        if type(value) == str and os.path.isdir(value):
+            self._sequence = []
+            self.image_loader_thread = load_dir_threaded(value, self._sequence)
+        elif type(value) == str:
+            self._sequence = [str]
+        else:
+            self._sequence = value
+        self.current_index = 0
+        if len(self._sequence) > 0:
+            self.current = self.sequence[self.current_index]
+
+    #def append_dir(self, dir_path):
+    #    dir_path = os.path.abspath(dir_path)
+    #    for path in scandir.listdir(dir_path):
+    #        path = os.path.join(dir_path, path)
+    #        if path.endswith(SUPPORTED_FORMATS_EXTENSIONS) and path not in self._sequence:
+    #            self._sequence.append(path)
+
+
+    #    #return [os.path.abspath(os.path.join(path, img)) for img in scandir.listdir(path) 
+    #    #        if os.path.isfile(os.path.join(path, img))]
 
 
 class TimeElapsedThread(QThread):

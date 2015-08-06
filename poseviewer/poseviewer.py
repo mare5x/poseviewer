@@ -57,7 +57,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.actionPrevious.triggered.connect(self.image_path.prev)
         self.actionFullscreen.triggered.connect(self.toggle_fullscreen)  # toggle fullscreen
         self.actionSound.triggered.connect(self.toggle_sound)  # toggle sound
-        self.actionSpeed.triggered.connect(self.set_slide_speed)  # set slide show speed
+        self.actionSpeed.triggered.connect(self.slideshow_settings.run)  # set slide show speed
         self.actionTimer.triggered.connect(self.toggle_label_timer)  # toggle timer display
 
         self.timeElapsedTimer.secElapsed.connect(self.update_timerLabel)  # update the timer label every second
@@ -66,7 +66,6 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
         self.slideshow_active = False  # is the slideshow playing
         self.sound = True  # is the sound turned on
-        self.slide_speed = self.slideshow_settings.speed
         self.timer_visible = False
         self.force_toolbar_display = False
         
@@ -91,7 +90,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
             self.dirs = dirs
         settings['dirs'] = self.dirs
         if self.dirs:  # '' is not a valid path
-            self.image_path.load_dir(self.dirs)
+            self.image_path.set_sequence(self.dirs)
 
     def update_image(self, path=None):
         """
@@ -200,7 +199,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         if speed:
             self.slideshowTimer.start(speed * 1000)  # ms to s
         else:
-            self.slideshowTimer.start(self.slide_speed * 1000)
+            self.slideshowTimer.start(self.slideshow_settings.speed * 1000)
 
     def stop_slideshowTimer(self):
         self.slideshowTimer.stop()
@@ -240,18 +239,6 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
             self.setWindowTitle("{} - {}".format(title.rsplit('\\', 1)[-1], self.WINDOW_TITLE))
         else:
             self.setWindowTitle("{} - {}".format(title, self.WINDOW_TITLE))
-
-    def set_slide_speed(self):
-        """
-        Set the slideshow speed by opening a inputdialog.
-        """
-        #slide_speed = QInputDialog()
-        #self.slide_speed = slide_speed.getInt(self, "Slideshow speed",
-        #                                      "Enter slideshow speed (seconds): ",
-        #                                      value=30, minValue=1)[0]
-        # return type: (int, bool)
-
-        self.slide_speed = self.slideshow_settings.get_speed()
 
     def set_icon(self, path, target):
         icon = QIcon()

@@ -2,10 +2,10 @@
 from PySide.QtGui import *
 import os
 import scandir
+from .imageloader import *
 
 
 SUPPORTED_FORMATS_FILTER = ["*.BMP", "*.GIF", "*.JPG", "*.JPEG", "*.PNG", "*.PBM", "*.PGM", "*.PPM", "*.XBM", "*.XPM"]
-SUPPORTED_FORMATS_EXTENSIONS = (".bmp", ".gif", ".jpg", ".jpeg", ".png", ".pbm", ".pgm", ".ppm", ".xbm", ".xpm")
 
 
 class ImageCanvas(QGraphicsView):
@@ -135,6 +135,8 @@ class ListImageViewer(QSplitter):
         self.is_displayed = False
         self.previous_model = self.string_list_model
 
+        self.image_loader_thread = ImageLoaderThread()
+
     def display(self, path):
         self.previous_model = self.tree_view.model()
         if type(path) == list:
@@ -164,19 +166,23 @@ class ListImageViewer(QSplitter):
         selection = []
         for index in self.tree_view.selectedIndexes():
             if index.column() == 0:
-                path = os.path.abspath(self.files_system_model.filePath(index))
-                if os.path.isdir(path):
-                    selection.extend([os.path.join(path, p) for p in scandir.listdir(path) if p.endswith(SUPPORTED_FORMATS_EXTENSIONS)
-                                      and os.path.join(path, p) not in selection])
-                else:
-                    selection.append(path)
+                selection.append(os.path.abspath(self.files_system_model.filePath(index)))
+                #if os.path.isdir(path):
+                #    selection.extend([os.path.join(path, p) for p in scandir.listdir(path) if p.endswith(SUPPORTED_FORMATS_EXTENSIONS)
+                #                      and os.path.join(path, p) not in selection])
+                #else:
+                #    selection.append(path)
         return selection
 
     def load_selected(self):
         if self.tree_view.model() == self.files_system_model:
+            all_selected = []
             selection = self.get_selected()
 
-            QTimer.singleShot(0, lambda: self.setDefaultSequence.emit(selection))
+            stop_thread(self.image_loader_thread)
+            self.image_loader_thread = load_dir_threaded(selection, all_selected)
+
+            QTimer.singleShot(0, lambda: self.setDefaultSequence.emit(all_selected))
         else:
             QTimer.singleShot(0, lambda: self.setDefaultSequence.emit(self.string_list_model.stringList()))
 
@@ -191,19 +197,20 @@ class SlideshowSettings(QDialog):
         layout = QGridLayout(self)
 
         speed_label = QLabel("Enter slideshow speed:", self)
-        self.speed_spinner = QSpinBox(parent=self, minimum=1, value=30, singleStep=5, suffix=" s")
+        self.speed_spinner = QSpinBox(parent=self, minimum=1, maximum=24*3600, value=30, singleStep=5, suffix=" s")
 
         self.increment_checkbox = QCheckBox("Increment slideshow speed?", self, checked=False)
 
         increment = QWidget(self)
         increment_layout = QGridLayout(increment)
         increment_label = QLabel("Enter increment interval:", self)
-        self.increment_interval = QSpinBox(parent=self, minimum=1, value=5)
+        self.increment_interval_spinner = QSpinBox(parent=self, minimum=1, value=5)
         increment_layout.addWidget(increment_label, 0, 0)
-        increment_layout.addWidget(self.increment_interval, 0, 1)
+        increment_layout.addWidget(self.increment_interval_spinner, 0, 1)
         increment.setLayout(increment_layout)
         increment.hide()
         self.increment_checkbox.toggled.connect(lambda: increment.setVisible(not increment.isVisible()))
+        self.increment_interval_spinner.valueChanged.connect(self.get_increment_speed)
 
         layout.addWidget(speed_label, 0, 0)
         layout.addWidget(self.speed_spinner, 0, 1)
@@ -211,13 +218,9 @@ class SlideshowSettings(QDialog):
         layout.addWidget(increment, 2, 0)
 
         self._speed = 30
-        self.increment_index = 0
-        self.speed_index = 0
-        
-    def get_speed(self):
-        self.exec_()
-        self.speed = self.speed_spinner.value()
-        return self.speed
+        self.increment_index = 0  # current index of slideshow
+        self._increment_speed = 0  # change speed length speed (by images)
+        self.speed_index = 1
 
     @property
     def speed(self):
@@ -228,13 +231,20 @@ class SlideshowSettings(QDialog):
     def speed(self, value):
         self._speed = value
 
-    def increment_speed(self):
-        if increment_index >= increment_interval:
-            self.speed *= 2 ** speed_index
-            self.increment_index = 0
-            self.increment_interval -= 1
-            self.speed_index += 1
-        increment_index += 1
+    def get_increment_speed(self):
+        self._increment_speed = self.increment_interval_spinner.value()
 
-        return speed
-        
+    def increment_speed(self):
+        if self.increment_index >= self._increment_speed:
+            self.speed *= 2 ** self.speed_index
+            self.increment_index = 0
+            self._increment_speed -= 1
+            self.speed_index += 1
+        else:
+            self.increment_index += 1
+
+        return self.speed
+
+    def run(self):
+        return self.exec_()
+
