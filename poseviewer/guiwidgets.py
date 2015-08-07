@@ -109,8 +109,9 @@ class ListImageViewer(QSplitter):
         self.tree_view = QTreeView(self)
         self.tree_view.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.tree_view.setModel(self.string_list_model)
-        self.tree_view.clicked.connect(self.paint_thumbnail)
         self.tree_view.doubleClicked.connect(self.apply_index)
+
+        self.tree_view.currentChanged = self.currentChanged  # subclass currentChanged slot of QTreeView
 
         self.canvas = ImageCanvas(self)
 
@@ -153,6 +154,11 @@ class ListImageViewer(QSplitter):
     def toggle_display(self):
         self.is_displayed = not self.is_displayed
         self.setVisible(self.is_displayed)
+
+    def currentChanged(self, current, previous):
+        """Reimplemented function from QTreeView"""
+        self.paint_thumbnail(current)
+        self.tree_view.scrollTo(current)
 
     def paint_thumbnail(self, index):
         image_path = self.string_list_model.data(index, 0) if self.tree_view.model() == self.string_list_model \
