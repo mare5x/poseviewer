@@ -13,7 +13,6 @@ if __name__ == '__main__':
 # TODO bookmark folder
 # TODO borderless window
 # TODO better slideshow (poseviwer trainer)
-# TODO load images in seperate thread
 
 # def get_img(path, index):
 #     if index >= len(scandir.listdir(path)):

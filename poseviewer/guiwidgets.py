@@ -194,6 +194,8 @@ class ListImageViewer(QSplitter):
 
 
 class SlideshowSettings(QDialog):
+    slideshowComplete = Signal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -204,6 +206,7 @@ class SlideshowSettings(QDialog):
 
         speed_label = QLabel("Enter slideshow speed:", self)
         self.speed_spinner = QSpinBox(parent=self, minimum=1, maximum=24*3600, value=30, singleStep=5, suffix=" s")
+        self.speed_spinner.valueChanged.connect(self.get_speed)
 
         self.increment_checkbox = QCheckBox("Increment slideshow speed?", self, checked=False)
 
@@ -223,33 +226,28 @@ class SlideshowSettings(QDialog):
         layout.addWidget(self.increment_checkbox)
         layout.addWidget(increment, 2, 0)
 
-        self._speed = 30
-        self.increment_index = 0  # current index of slideshow
-        self._increment_speed = 0  # change speed length speed (by images)
-        self.speed_index = 1
+        self._speed = self.get_speed()
+        self.slideshow_counter = 0  # current index of slideshow
+        self.increment_interval = 0  # change speed length speed (by images)
 
-    @property
-    def speed(self):
+    def get_speed(self):
         self._speed = self.speed_spinner.value()
         return self._speed
 
-    @speed.setter
-    def speed(self, value):
-        self._speed = value
-
     def get_increment_speed(self):
-        self._increment_speed = self.increment_interval_spinner.value()
+        self.increment_interval = self.increment_interval_spinner.value()
 
     def increment_speed(self):
-        if self.increment_index >= self._increment_speed:
-            self.speed *= 2 ** self.speed_index
-            self.increment_index = 0
-            self._increment_speed -= 1
-            self.speed_index += 1
+        if self.increment_interval == 0:
+            QTimer.singleShot(0, self.slideshowComplete.emit)
+        elif self.slideshow_counter >= self.increment_interval and self.increment_interval != 0:
+            self._speed = self.speed_spinner.value() * 2 ** ((self.increment_interval_spinner.value() - self.slideshow_counter) + 1)
+            self.slideshow_counter = 0
+            self.increment_interval -= 1
         else:
-            self.increment_index += 1
+            self.slideshow_counter += 1
 
-        return self.speed
+        return self._speed
 
     def run(self):
         return self.exec_()

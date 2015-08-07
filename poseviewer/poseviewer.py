@@ -32,6 +32,8 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
         self.setCentralWidget(self.window)
 
+        self.slideshow_settings.slideshowComplete.connect(self.toggle_slideshow)
+
         self.image_path.imageChanged.connect(self.prepare_image)
         self.image_path.sequenceChanged.connect(self.action_options.enable_all_actions)
 
@@ -122,15 +124,16 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         if self.slideshow_settings.increment_checkbox.isChecked():
             self.start_slideshowTimer(self.slideshow_settings.increment_speed())
 
-    def paint_background(self, qcolor, full_background=False):
+    def paint_background(self, widget, qcolor, full_background=False):
         if full_background:
             full_background = QPalette()
-            full_background.setColor(self.backgroundRole(), qcolor)
-            self.setPalette(full_background)
+            full_background.setColor(widget.backgroundRole(), qcolor)
+            widget.setPalette(full_background)
         else:
-            self.setPalette(self.DEFAULT_PALETTE)
+            widget.setPalette(self.DEFAULT_PALETTE)
 
         self.image_canvas.setBackgroundBrush(QBrush(qcolor))
+        self.list_image_viewer.canvas.setBackgroundBrush(QBrush(qcolor))
 
     def toggle_fullscreen(self):
         """
@@ -138,13 +141,13 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         """
         if self.isFullScreen():  # go back to normal
             self.set_icon(":/Icons/fullscreen.png", self.actionFullscreen)
-            self.paint_background(Qt.NoBrush)
+            self.paint_background(self, Qt.NoBrush)
             self.setGeometry(self.window_dimensions)
             self.showNormal()
         else:  # go to fullscreen
             self.set_icon(":/Icons/closefullscreen.png", self.actionFullscreen)
             self.window_dimensions = self.geometry()  # save current window settings
-            self.paint_background(Qt.black, True)
+            self.paint_background(self, Qt.black, True)
             self.showFullScreen()
 
         if not self.force_toolbar_display: self.toolBar.hide()
@@ -160,7 +163,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         else:  # if it's not playing, play it
             self.beep()
             self.set_icon(":/Icons/pause.png", self.actionPlay)
-            self.next_image()
+            #self.next_image()
             self.start_slideshowTimer()
         self.slideshow_active = not self.slideshow_active
 
@@ -199,7 +202,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         if speed:
             self.slideshowTimer.start(speed * 1000)  # ms to s
         else:
-            self.slideshowTimer.start(self.slideshow_settings.speed * 1000)
+            self.slideshowTimer.start(self.slideshow_settings.get_speed() * 1000)
 
     def stop_slideshowTimer(self):
         self.slideshowTimer.stop()
@@ -211,7 +214,10 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
     def update_timerLabel(self):
         if self.timer_visible:
-            self.timerLabel.setText(self.timeElapsedTimer.time_elapsed())
+            if self.slideshow_active:
+                self.timerLabel.setText(get_time_from_secs(self.slideshow_settings._speed - self.timeElapsedTimer.secs_elapsed))
+            else:
+                self.timerLabel.setText(self.timeElapsedTimer.time_elapsed())
 
     def show_stats(self):
         QMessageBox.information(self, 'Stats',
@@ -264,6 +270,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
                 self.toolBar.show()
         elif event.type() == QEvent.Leave and object is self:
             self.toolBar.hide()
+
         return QMainWindow.eventFilter(self, object, event)
 
     def contextMenuEvent(self, event):
