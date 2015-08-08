@@ -226,9 +226,11 @@ class SlideshowSettings(QDialog):
         layout.addWidget(self.increment_checkbox)
         layout.addWidget(increment, 2, 0)
 
+        self.slideshowComplete.connect(self.reset_settings)
+
         self._speed = self.get_speed()
-        self.slideshow_counter = 0  # current index of slideshow
-        self.increment_interval = 0  # change speed length speed (by images)
+        self.slideshow_counter = 1  # current index of slideshow
+        self.increment_interval = self.increment_interval_spinner.value()  # change speed length speed (by images)
 
     def get_speed(self):
         self._speed = self.speed_spinner.value()
@@ -249,6 +251,34 @@ class SlideshowSettings(QDialog):
 
         return self._speed
 
+    def reset_settings(self):
+        self._speed = self.speed_spinner.value()
+        self.slideshow_counter = 1
+        self.increment_interval = self.increment_interval_spinner.value()
+
     def run(self):
         return self.exec_()
 
+
+class NotificationPopupWidget(QLabel):
+    def __init__(self, parent=None, position=None):
+        super().__init__(parent)
+        self.setWindowFlags(Qt.SplashScreen|Qt.WindowStaysOnTopHint)
+        self.setWindowOpacity(0.65)
+        self.setFixedWidth(200)
+        self.move(QApplication.desktop().screenGeometry().topRight().x() - self.width() - 20, 20)
+
+        self.setTextFormat(Qt.RichText)
+        self.setWordWrap(True)
+        self.setAlignment(Qt.AlignCenter)
+        self.setStyleSheet("border: 3px solid green; border-radius: 4px; padding: 2px; background: DeepSkyBlue; color: red; font-size: 24px")
+
+    def notify(self, msg, duration=3):
+        self.setText(msg)
+        self.adjustSize()
+        self.show()
+        if duration > 0:
+            QTimer.singleShot(duration * 1000, self.hide)
+
+    def mousePressEvent(self, event):
+        self.hide()

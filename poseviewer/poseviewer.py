@@ -19,6 +19,8 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         super().__init__(parent)
         self.setupUi(self)
 
+        self.notification_widget = NotificationPopupWidget(self)
+
         self.image_path = ImagePath(self)
         self.image_canvas = ImageCanvas(self)
         self.list_image_viewer = ListImageViewer(parent=self)
@@ -33,6 +35,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.setCentralWidget(self.window)
 
         self.slideshow_settings.slideshowComplete.connect(self.toggle_slideshow)
+        self.slideshow_settings.slideshowComplete.connect(lambda: self.notification_widget.notify('Slideshow Complete!', duration=0))
 
         self.image_path.imageChanged.connect(self.prepare_image)
         self.image_path.sequenceChanged.connect(self.action_options.enable_all_actions)
@@ -121,7 +124,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         if self.sound and self.slideshow_active:
             self.beep()
 
-        if self.slideshow_settings.increment_checkbox.isChecked():
+        if self.slideshow_settings.increment_checkbox.isChecked() and self.slideshow_active:
             self.start_slideshowTimer(self.slideshow_settings.increment_speed())
 
     def paint_background(self, widget, qcolor, full_background=False):
@@ -242,7 +245,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
     def set_window_title(self, title):
         if os.path.isfile(title):
-            self.setWindowTitle("{} - {}".format(title.rsplit('\\', 1)[-1], self.WINDOW_TITLE))
+            self.setWindowTitle("{} - {}".format(os.path.basename(title), self.WINDOW_TITLE))
         else:
             self.setWindowTitle("{} - {}".format(title, self.WINDOW_TITLE))
 
