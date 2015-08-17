@@ -3,6 +3,7 @@ from PySide.QtGui import *
 import os
 import scandir
 from .imageloader import *
+from .corewidgets import get_time_from_secs
 
 
 SUPPORTED_FORMATS_FILTER = ["*.BMP", "*.GIF", "*.JPG", "*.JPEG", "*.PNG", "*.PBM", "*.PGM", "*.PPM", "*.XBM", "*.XPM"]
@@ -31,6 +32,9 @@ class ImageCanvas(QGraphicsView):
         self.pix_item = QGraphicsPixmapItem()
         self.pix_item.setTransformationMode(Qt.SmoothTransformation)  # make it smooooth
 
+        self.movie = QMovie(self)
+        self.movie.updated.connect(self.update_gif)
+
         self.imageScene.addItem(self.pix_item)  # add pixmap to scene
         self.setScene(self.imageScene)  # apply scene to view
 
@@ -48,8 +52,24 @@ class ImageCanvas(QGraphicsView):
                                  pix_image.height()))  # update the rect so it isn't retarded like by default -- center image
         self.fit_in_view()
 
+        if self.image_path.lower().endswith(".gif"):
+            self.play_gif(self.image_path, size=size)
+        else:
+            self.movie.stop()
+
     def fit_in_view(self):
         self.fitInView(self.sceneRect(), Qt.KeepAspectRatio)
+
+    def play_gif(self, path, size=None):
+        if self.movie.state() == QMovie.Running:
+            self.movie.stop()
+        self.movie.setFileName(path)
+        if size:
+            self.movie.setScaledSize(size)
+        self.movie.start()
+
+    def update_gif(self):
+        self.pix_item.setPixmap(self.movie.currentPixmap())
 
     def flip_upside_down(self):
         if self.actionFlipUpDown.isChecked():
@@ -79,7 +99,19 @@ class ImageCanvas(QGraphicsView):
         pix = QPixmap.grabWidget(self)
         return pix.save(file_name)
 
+    def mouseDoubleClickEvent(self, event):
+        """Double click to pause/unpause the playing gif (if any). """
+
+        if self.movie.state() == QMovie.Running:
+            self.movie.setPaused(True)
+        elif self.movie.state() == QMovie.Paused:
+            self.movie.setPaused(False)
+        else:
+            event.accept()
+
     def wheelEvent(self, event):
+        """ Zoom using the scroll wheel. """
+
         old_pos = self.mapToScene(event.pos())
 
         if event.delta() > 0:  # mouse wheel away = zoom in
@@ -173,11 +205,6 @@ class ListImageViewer(QSplitter):
         for index in self.tree_view.selectedIndexes():
             if index.column() == 0:
                 selection.append(os.path.abspath(self.files_system_model.filePath(index)))
-                #if os.path.isdir(path):
-                #    selection.extend([os.path.join(path, p) for p in scandir.listdir(path) if p.endswith(SUPPORTED_FORMATS_EXTENSIONS)
-                #                      and os.path.join(path, p) not in selection])
-                #else:
-                #    selection.append(path)
         return selection
 
     def load_selected(self):
@@ -195,6 +222,7 @@ class ListImageViewer(QSplitter):
 
 class SlideshowSettings(QDialog):
     slideshowComplete = Signal()
+    incrementIntervalChanged = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -202,29 +230,33 @@ class SlideshowSettings(QDialog):
         self.setWindowTitle("Slideshow Settings")
         self.setMinimumSize(300, 150)
 
-        layout = QGridLayout(self)
-
         speed_label = QLabel("Enter slideshow speed:", self)
         self.speed_spinner = QSpinBox(parent=self, minimum=1, maximum=24*3600, value=30, singleStep=5, suffix=" s")
-        self.speed_spinner.valueChanged.connect(self.get_speed)
-
         self.increment_checkbox = QCheckBox("Increment slideshow speed?", self, checked=False)
 
         increment = QWidget(self)
         increment_layout = QGridLayout(increment)
         increment_label = QLabel("Enter increment interval:", self)
+        self.slideshow_time_left_label = QLabel('Slideshow total time: ', self)
         self.increment_interval_spinner = QSpinBox(parent=self, minimum=1, value=5)
         increment_layout.addWidget(increment_label, 0, 0)
         increment_layout.addWidget(self.increment_interval_spinner, 0, 1)
+        increment_layout.addWidget(self.slideshow_time_left_label, 1, 0)
         increment.setLayout(increment_layout)
         increment.hide()
-        self.increment_checkbox.toggled.connect(lambda: increment.setVisible(not increment.isVisible()))
-        self.increment_interval_spinner.valueChanged.connect(self.get_increment_speed)
 
+        layout = QGridLayout(self)
         layout.addWidget(speed_label, 0, 0)
         layout.addWidget(self.speed_spinner, 0, 1)
         layout.addWidget(self.increment_checkbox)
         layout.addWidget(increment, 2, 0)
+
+        self.speed_spinner.valueChanged.connect(self.get_speed)
+        self.speed_spinner.valueChanged.connect(self.update_slideshow_time_left)
+
+        self.increment_checkbox.toggled.connect(lambda: increment.setVisible(not increment.isVisible()))
+        self.increment_interval_spinner.valueChanged.connect(self.get_increment_speed)
+        self.increment_interval_spinner.valueChanged.connect(self.update_slideshow_time_left)
 
         self.slideshowComplete.connect(self.reset_settings)
 
@@ -244,8 +276,9 @@ class SlideshowSettings(QDialog):
             QTimer.singleShot(0, self.slideshowComplete.emit)
         elif self.slideshow_counter >= self.increment_interval and self.increment_interval != 0:
             self._speed = self.speed_spinner.value() * 2 ** ((self.increment_interval_spinner.value() - self.slideshow_counter) + 1)
-            self.slideshow_counter = 0
+            self.slideshow_counter = 1
             self.increment_interval -= 1
+            QTimer.singleShot(0, self.incrementIntervalChanged.emit)
         else:
             self.slideshow_counter += 1
 
@@ -256,6 +289,15 @@ class SlideshowSettings(QDialog):
         self.slideshow_counter = 1
         self.increment_interval = self.increment_interval_spinner.value()
 
+    def calculate_slideshow_time_left(self):
+        total = 0 if self.increment_interval > 1 else self.speed_spinner.value()
+        for i in range(1, self.increment_interval + 1):
+            total += i * (self.speed_spinner.value() * 2 ** ((self.increment_interval_spinner.value() - i) + 1))
+        return total
+
+    def update_slideshow_time_left(self):
+        self.slideshow_time_left_label.setText('Slideshow total time: {}'.format(get_time_from_secs(self.calculate_slideshow_time_left())))
+
     def run(self):
         return self.exec_()
 
@@ -263,7 +305,7 @@ class SlideshowSettings(QDialog):
 class NotificationPopupWidget(QLabel):
     def __init__(self, parent=None, position=None):
         super().__init__(parent)
-        self.setWindowFlags(Qt.SplashScreen|Qt.WindowStaysOnTopHint)
+        self.setWindowFlags(Qt.SplashScreen|Qt.WindowStaysOnTopHint|Qt.FramelessWindowHint)
         self.setWindowOpacity(0.65)
         self.setFixedWidth(200)
         self.move(QApplication.desktop().screenGeometry().topRight().x() - self.width() - 20, 20)
@@ -271,7 +313,7 @@ class NotificationPopupWidget(QLabel):
         self.setTextFormat(Qt.RichText)
         self.setWordWrap(True)
         self.setAlignment(Qt.AlignCenter)
-        self.setStyleSheet("border: 3px solid green; border-radius: 4px; padding: 2px; background: DeepSkyBlue; color: red; font-size: 24px")
+        self.setStyleSheet("border: 2px solid blue; padding: 1px; background: DeepSkyBlue; color: blue; font-size: 24px")
 
     def notify(self, msg, duration=3):
         self.setText(msg)

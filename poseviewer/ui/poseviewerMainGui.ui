@@ -15,7 +15,7 @@
   </property>
   <property name="windowIcon">
    <iconset resource="icons.qrc">
-    <normaloff>:/Icons/windowicon.png</normaloff>:/Icons/windowicon.png</iconset>
+    <normaloff>:/Icons/Icons/windowicon.png</normaloff>:/Icons/Icons/windowicon.png</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout"/>
@@ -45,12 +45,13 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
-   <addaction name="actionSpeed"/>
+   <addaction name="actionSettings"/>
    <addaction name="actionOpen"/>
    <addaction name="actionFullscreen"/>
    <addaction name="separator"/>
    <addaction name="actionPrevious"/>
    <addaction name="actionPlay"/>
+   <addaction name="actionPause"/>
    <addaction name="actionNext"/>
    <addaction name="separator"/>
    <addaction name="actionRandom"/>
@@ -58,22 +59,25 @@
    <addaction name="actionTimer"/>
    <addaction name="separator"/>
   </widget>
-  <action name="actionSpeed">
+  <action name="actionSettings">
    <property name="icon">
     <iconset resource="icons.qrc">
-     <normaloff>:/Icons/settings.png</normaloff>:/Icons/settings.png</iconset>
+     <normaloff>:/Icons/Icons/settings.png</normaloff>:/Icons/Icons/settings.png</iconset>
    </property>
    <property name="text">
-    <string>Change slideshow speed</string>
+    <string>Change slideshow settings</string>
    </property>
    <property name="toolTip">
-    <string>Change slideshow speed</string>
+    <string>Change slideshow settings</string>
+   </property>
+   <property name="shortcut">
+    <string>Alt+S</string>
    </property>
   </action>
   <action name="actionOpen">
    <property name="icon">
     <iconset resource="icons.qrc">
-     <normaloff>:/Icons/open.png</normaloff>:/Icons/open.png</iconset>
+     <normaloff>:/Icons/Icons/open.png</normaloff>:/Icons/Icons/open.png</iconset>
    </property>
    <property name="text">
     <string>Open Directory</string>
@@ -91,7 +95,7 @@
    </property>
    <property name="icon">
     <iconset resource="icons.qrc">
-     <normaloff>:/Icons/play.png</normaloff>:/Icons/play.png</iconset>
+     <normaloff>:/Icons/Icons/play.png</normaloff>:/Icons/Icons/play.png</iconset>
    </property>
    <property name="text">
     <string>Toggle slideshow</string>
@@ -106,7 +110,7 @@
   <action name="actionFullscreen">
    <property name="icon">
     <iconset resource="icons.qrc">
-     <normaloff>:/Icons/fullscreen.png</normaloff>:/Icons/fullscreen.png</iconset>
+     <normaloff>:/Icons/Icons/fullscreen.png</normaloff>:/Icons/Icons/fullscreen.png</iconset>
    </property>
    <property name="text">
     <string>Toggle Fullscreen</string>
@@ -124,7 +128,7 @@
    </property>
    <property name="icon">
     <iconset resource="icons.qrc">
-     <normaloff>:/Icons/previous.png</normaloff>:/Icons/previous.png</iconset>
+     <normaloff>:/Icons/Icons/previous.png</normaloff>:/Icons/Icons/previous.png</iconset>
    </property>
    <property name="text">
     <string>Previous image</string>
@@ -142,7 +146,7 @@
    </property>
    <property name="icon">
     <iconset resource="icons.qrc">
-     <normaloff>:/Icons/next.png</normaloff>:/Icons/next.png</iconset>
+     <normaloff>:/Icons/Icons/next.png</normaloff>:/Icons/Icons/next.png</iconset>
    </property>
    <property name="text">
     <string>Next image</string>
@@ -160,7 +164,7 @@
    </property>
    <property name="icon">
     <iconset resource="icons.qrc">
-     <normaloff>:/Icons/shuffle.png</normaloff>:/Icons/shuffle.png</iconset>
+     <normaloff>:/Icons/Icons/shuffle.png</normaloff>:/Icons/Icons/shuffle.png</iconset>
    </property>
    <property name="text">
     <string>Pick random image</string>
@@ -178,7 +182,7 @@
    </property>
    <property name="icon">
     <iconset resource="icons.qrc">
-     <normaloff>:/Icons/soundon.png</normaloff>:/Icons/soundon.png</iconset>
+     <normaloff>:/Icons/Icons/soundon.png</normaloff>:/Icons/Icons/soundon.png</iconset>
    </property>
    <property name="text">
     <string>Toggle sound effects during slideshow.</string>
@@ -201,13 +205,34 @@
    </property>
    <property name="icon">
     <iconset resource="icons.qrc">
-     <normaloff>:/Icons/timer.png</normaloff>:/Icons/timer.png</iconset>
+     <normaloff>:/Icons/Icons/timer.png</normaloff>:/Icons/Icons/timer.png</iconset>
    </property>
    <property name="text">
     <string>Toggle timer display</string>
    </property>
    <property name="toolTip">
     <string>Toggle timer display</string>
+   </property>
+  </action>
+  <action name="actionPause">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="icons.qrc">
+     <normaloff>:/Icons/Icons/pause.png</normaloff>:/Icons/Icons/pause.png</iconset>
+   </property>
+   <property name="text">
+    <string>Pause slideshow</string>
+   </property>
+   <property name="toolTip">
+    <string>Pause slideshow</string>
+   </property>
+   <property name="shortcut">
+    <string>P</string>
    </property>
   </action>
  </widget>

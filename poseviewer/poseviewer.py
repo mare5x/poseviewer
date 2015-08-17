@@ -36,6 +36,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
         self.slideshow_settings.slideshowComplete.connect(self.toggle_slideshow)
         self.slideshow_settings.slideshowComplete.connect(lambda: self.notification_widget.notify('Slideshow Complete!', duration=0))
+        self.slideshow_settings.incrementIntervalChanged.connect(self.notify_slideshow_change)
 
         self.image_path.imageChanged.connect(self.prepare_image)
         self.image_path.sequenceChanged.connect(self.action_options.enable_all_actions)
@@ -45,7 +46,8 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.list_image_viewer.starImage.connect(self.star_image)
         self.list_image_viewer.setDefaultSequence.connect(lambda seq: self.image_path.set_sequence(seq))
 
-        self.slideshowTimer = QTimer()  # make a timer ready to be used
+        self.slideshow_timer = QTimer(self, singleShot=True)  # make a timer ready to be used
+        self.slideshow_timer_elapsed = QTime()
         self.timeElapsedTimer = TimeElapsedThread(self)
         self.totalTimeElapsed = QElapsedTimer()  # keep a track of the whole time spent in app
         self.totalTimeElapsed.start()
@@ -57,19 +59,22 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
         self.actionOpen.triggered.connect(self.get_directory)
         self.actionPlay.triggered.connect(self.toggle_slideshow)  # show image and start the timer
+        self.actionPause.triggered.connect(self.pause_slideshow)
         self.actionRandom.triggered.connect(self.image_path.random)  # make a shuffled list
         self.actionNext.triggered.connect(self.next_image)
         self.actionPrevious.triggered.connect(self.image_path.prev)
         self.actionFullscreen.triggered.connect(self.toggle_fullscreen)  # toggle fullscreen
         self.actionSound.triggered.connect(self.toggle_sound)  # toggle sound
-        self.actionSpeed.triggered.connect(self.slideshow_settings.run)  # set slide show speed
+        self.actionSettings.triggered.connect(self.slideshow_settings.run)  # set slide show speed
         self.actionTimer.triggered.connect(self.toggle_label_timer)  # toggle timer display
 
         self.timeElapsedTimer.secElapsed.connect(self.update_timerLabel)  # update the timer label every second
         self.timeElapsedTimer.finished.connect(self.timeElapsedTimer.deleteLater)
-        self.slideshowTimer.timeout.connect(self.next_image)  # every slide_speed seconds show image
+        self.slideshow_timer.timeout.connect(self.next_image)  # every slide_speed seconds show image
+        self.slideshow_timer.timeout.connect(self.slideshow_timer_elapsed.restart)
 
         self.slideshow_active = False  # is the slideshow playing
+        self.slideshow_time_left = 0
         self.sound = True  # is the sound turned on
         self.timer_visible = False
         self.force_toolbar_display = False
@@ -125,7 +130,9 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
             self.beep()
 
         if self.slideshow_settings.increment_checkbox.isChecked() and self.slideshow_active:
-            self.start_slideshowTimer(self.slideshow_settings.increment_speed())
+            self.start_slideshow_timer(self.slideshow_settings.increment_speed() * 1000)
+        elif self.slideshow_active:
+            self.slideshow_timer.start()
 
     def paint_background(self, widget, qcolor, full_background=False):
         if full_background:
@@ -143,12 +150,12 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         Deal with entering/exiting fullscreen mode.
         """
         if self.isFullScreen():  # go back to normal
-            self.set_icon(":/Icons/fullscreen.png", self.actionFullscreen)
+            self.set_icon(":/Icons/Icons/fullscreen.png", self.actionFullscreen)
             self.paint_background(self, Qt.NoBrush)
             self.setGeometry(self.window_dimensions)
             self.showNormal()
         else:  # go to fullscreen
-            self.set_icon(":/Icons/closefullscreen.png", self.actionFullscreen)
+            self.set_icon(":/Icons/Icons/closefullscreen.png", self.actionFullscreen)
             self.window_dimensions = self.geometry()  # save current window settings
             self.paint_background(self, Qt.black, True)
             self.showFullScreen()
@@ -161,23 +168,27 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         """Deals with starting/stopping the slideshow.
         """
         if self.slideshow_active:  # if it's playing, stop it
-            self.set_icon(":/Icons/play.png", self.actionPlay)
-            self.stop_slideshowTimer()
+            self.set_icon(":/Icons/Icons/play.png", self.actionPlay)
+            self.slideshow_timer.stop()
         else:  # if it's not playing, play it
             self.beep()
-            self.set_icon(":/Icons/pause.png", self.actionPlay)
-            #self.next_image()
-            self.start_slideshowTimer()
+            self.set_icon(":/Icons/Icons/stop.png", self.actionPlay)
+            self.slideshow_settings.reset_settings()
+            self.notify_slideshow_change()
+            self.slideshow_timer_elapsed.start()
+            self.start_slideshow_timer()
+
         self.slideshow_active = not self.slideshow_active
+        self.actionPause.setEnabled(self.slideshow_active)
 
     def toggle_sound(self):
         """
         Toggle whether there should be a beep during a slideshow.
         """
         if self.sound:  # sound is on and you stop it
-            self.set_icon(":/Icons/soundoff.png", self.actionSound)
+            self.set_icon(":/Icons/Icons/soundoff.png", self.actionSound)
         else:  # sound is not on and you put it on
-            self.set_icon(":/Icons/soundon.png", self.actionSound)
+            self.set_icon(":/Icons/Icons/soundon.png", self.actionSound)
         self.sound = not self.sound
 
     def toggle_label_timer(self):
@@ -201,14 +212,29 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
         self.update_image()
 
-    def start_slideshowTimer(self, speed=0):
+    def start_slideshow_timer(self, speed=0):
         if speed:
-            self.slideshowTimer.start(speed * 1000)  # ms to s
+            self.slideshow_timer.start(speed) 
         else:
-            self.slideshowTimer.start(self.slideshow_settings.get_speed() * 1000)
+            self.slideshow_timer.start(self.slideshow_settings.get_speed() * 1000)  # ms to s
 
-    def stop_slideshowTimer(self):
-        self.slideshowTimer.stop()
+    # TODO
+    def pause_slideshow(self):
+        if self.actionPause.isChecked() and self.slideshow_active:
+            self.slideshow_time_left = self.slideshow_timer.interval() - self.slideshow_timer_elapsed.elapsed()
+            self.slideshow_timer.stop()
+            self.slideshow_active = False
+        else:
+            QTimer.singleShot(self.slideshow_time_left, self.next_image)
+            QTimer.singleShot(self.slideshow_time_left, self.slideshow_timer.start)
+            self.slideshow_active = True
+
+    def notify_slideshow_change(self):
+        msg = "Turning it up to {}".format(get_time_from_secs(self.slideshow_settings._speed))
+        if self.slideshow_settings.increment_checkbox.isChecked():
+            msg += " for {} images!\nTime left in slideshow: {}".format(self.slideshow_settings.increment_interval, 
+                                                                        get_time_from_secs(self.slideshow_settings.calculate_slideshow_time_left()))
+        self.notification_widget.notify(msg)
 
     @staticmethod
     def beep():
@@ -303,11 +329,17 @@ class ActionOptions:
 
         self.path_actions = QActionGroup(self.main_window)
         self.path_actions.addAction(self.main_window.actionOpen)
-        self.path_actions.addAction(self.main_window.actionSpeed)
         self.path_actions.addAction(self.main_window.actionFullscreen)
 
         self.random_actions = QActionGroup(self.main_window)
         self.random_actions.addAction(self.main_window.actionRandom)
+
+        self.misc_actions = QActionGroup(self.main_window)
+        self.slideshow_actions = QActionGroup(self.main_window)
+        self.slideshow_actions.addAction(self.main_window.actionSettings)
+        self.slideshow_actions.addAction(self.main_window.actionPlay)
+        self.slideshow_actions.addAction(self.main_window.actionNext)
+        self.slideshow_actions.addAction(self.main_window.actionPrevious)
 
         self.stars_actions = QActionGroup(self.main_window)
 
@@ -318,19 +350,19 @@ class ActionOptions:
         self.add_actions_to(self.path_actions, self.main_window)
         self.add_actions_to(self.random_actions, self.main_window)
         self.add_actions_to(self.stars_actions, self.main_window)
+        self.add_actions_to(self.misc_actions, self.main_window)
+        self.add_actions_to(self.slideshow_actions, self.main_window)
 
-        self.main_window.addAction(self.main_window.actionSpeed)
         self.main_window.addAction(self.main_window.actionOpen)
         self.main_window.addAction(self.main_window.actionFullscreen)
-        self.main_window.addAction(self.main_window.actionPrevious)
-        self.main_window.addAction(self.main_window.actionPlay)
-        self.main_window.addAction(self.main_window.actionNext)
         self.main_window.addAction(self.main_window.actionSound)
         self.main_window.addAction(self.main_window.actionTimer)
 
     def create_actions(self):
-        self.main_window.actionStats = QAction("Run time", self.main_window, triggered=self.main_window.show_stats)
-        self.main_window.actionBars = QAction("Hide/Show toolbar", self.main_window, triggered=self.main_window.toggle_bars)
+        # ------- misc_actions --------
+        self.main_window.actionStats = self.create_action("Run time", self.main_window, triggered=self.main_window.show_stats, action_group=self.misc_actions)
+        self.main_window.actionBars = self.create_action("Hide/Show toolbar", self.main_window, triggered=self.main_window.toggle_bars, action_group=self.misc_actions)
+        # ------- /misc_actions -------
 
         # ------- image_actions -------
         self.main_window.image_canvas.actionFlipUpDown = self.create_action("Flip upside down", self.main_window,
@@ -413,10 +445,6 @@ class ActionOptions:
             obj.addAction(action)
 
     def enable_all_actions(self):
-        self.main_window.actionPlay.setEnabled(True)
-        self.main_window.actionNext.setEnabled(True)
-        self.main_window.actionPrevious.setEnabled(True)
-
         self.main_window.actionSound.setEnabled(True)
         self.main_window.actionTimer.setEnabled(True)
 
@@ -424,17 +452,15 @@ class ActionOptions:
         self.enable_actions_for(self.image_actions)
         self.enable_actions_for(self.stars_actions)
         self.enable_actions_for(self.path_actions)
+        self.enable_actions_for(self.slideshow_actions)
 
     def add_to_context_menu(self, menu):
         menu.addAction(self.main_window.actionOpen)
         self.add_actions_to(self.path_actions, menu)
-        menu.addAction(self.main_window.actionSpeed)
         menu.addAction(self.main_window.actionFullscreen)
         menu.addSeparator()
 
-        menu.addAction(self.main_window.actionPrevious)
-        menu.addAction(self.main_window.actionPlay)
-        menu.addAction(self.main_window.actionNext)
+        self.add_actions_to(self.slideshow_actions, menu)
         menu.addSeparator()
 
         self.add_actions_to(self.random_actions, menu)
@@ -445,8 +471,7 @@ class ActionOptions:
         self.add_actions_to(self.image_actions, menu)
 
         menu.addSeparator()
-        menu.addAction(self.main_window.actionStats)
-        menu.addAction(self.main_window.actionBars)
+        self.add_actions_to(self.misc_actions, menu)
 
         menu.addSeparator()
         self.add_actions_to(self.stars_actions, menu)
