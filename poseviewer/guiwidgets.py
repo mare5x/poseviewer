@@ -4,6 +4,7 @@ import os
 import scandir
 from .imageloader import *
 from .corewidgets import get_time_from_secs
+from .ui.slideshowsettingsui import Ui_Dialog
 
 
 SUPPORTED_FORMATS_FILTER = ["*.BMP", "*.GIF", "*.JPG", "*.JPEG", "*.PNG", "*.PBM", "*.PGM", "*.PPM", "*.XBM", "*.XPM"]
@@ -220,41 +221,19 @@ class ListImageViewer(QSplitter):
             QTimer.singleShot(0, lambda: self.setDefaultSequence.emit(self.string_list_model.stringList()))
 
 
-class SlideshowSettings(QDialog):
+class SlideshowSettings(QDialog, Ui_Dialog):
     slideshowComplete = Signal()
     incrementIntervalChanged = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.setupUi(self)  # Ui_Dialog
 
-        self.setWindowTitle("Slideshow Settings")
-        self.setMinimumSize(300, 150)
-
-        speed_label = QLabel("Enter slideshow speed:", self)
-        self.speed_spinner = QSpinBox(parent=self, minimum=1, maximum=24*3600, value=30, singleStep=5, suffix=" s")
-        self.increment_checkbox = QCheckBox("Increment slideshow speed?", self, checked=False)
-
-        increment = QWidget(self)
-        increment_layout = QGridLayout(increment)
-        increment_label = QLabel("Enter increment interval:", self)
-        self.slideshow_time_left_label = QLabel('Slideshow total time: ', self)
-        self.increment_interval_spinner = QSpinBox(parent=self, minimum=1, value=5)
-        increment_layout.addWidget(increment_label, 0, 0)
-        increment_layout.addWidget(self.increment_interval_spinner, 0, 1)
-        increment_layout.addWidget(self.slideshow_time_left_label, 1, 0)
-        increment.setLayout(increment_layout)
-        increment.hide()
-
-        layout = QGridLayout(self)
-        layout.addWidget(speed_label, 0, 0)
-        layout.addWidget(self.speed_spinner, 0, 1)
-        layout.addWidget(self.increment_checkbox)
-        layout.addWidget(increment, 2, 0)
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)  # removes question mark
 
         self.speed_spinner.valueChanged.connect(self.get_speed)
         self.speed_spinner.valueChanged.connect(self.update_slideshow_time_left)
 
-        self.increment_checkbox.toggled.connect(lambda: increment.setVisible(not increment.isVisible()))
         self.increment_interval_spinner.valueChanged.connect(self.get_increment_speed)
         self.increment_interval_spinner.valueChanged.connect(self.update_slideshow_time_left)
 
