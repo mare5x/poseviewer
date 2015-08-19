@@ -145,11 +145,11 @@ class ImagePath(QObject):
     #            self._sequence.append(path)
 
 
-    #    #return [os.path.abspath(os.path.join(path, img)) for img in scandir.listdir(path) 
+    #    #return [os.path.abspath(os.path.join(path, img)) for img in scandir.listdir(path)
     #    #        if os.path.isfile(os.path.join(path, img))]
 
 
-class TimeElapsedThread(QThread):
+class TimeElapsedTimer(QObject):
     """
     Thread for continuous time tracking.
     Emits a secElapsed signal after each second.
@@ -161,25 +161,22 @@ class TimeElapsedThread(QThread):
         super().__init__(parent)
 
         self.secs_elapsed = 0
-        self.secs = 0
-        self.mins = 0
-        self.hours = 0
 
-        # self.exit = False  # for safe exiting  -  not stuck in while loop
+        self.timer = QTimer(self, interval=1000)
+        self.timer.timeout.connect(self.update_time)
 
-    def run(self):
-        while True:
-            self.sleep(1)  # 1 seconds expired
-            self.secs_elapsed += 1  # secs_elapsed instead of secs because secs is recalculated
-            self.time_elapsed()  # don't calculate from ms because we always restart the timer
-            self.secElapsed.emit()
+    def start(self):
+        self.timer.start()
 
-    def time_elapsed(self):
+    def update_time(self):
+        self.secs_elapsed += 1
+        QTimer.singleShot(0, self.secElapsed.emit)
+
+    def get_time_elapsed(self):
         """
         Calculate elapsed hours, minutes, seconds.
         """
-        self.hours, self.mins, self.secs = get_time_from_secs(self.secs_elapsed, False)
         return get_time_from_secs(self.secs_elapsed)
 
     def set_time_to_zero(self):
-        self.secs_elapsed, self.secs, self.mins, self.hours = 0, 0, 0, 0
+        self.secs_elapsed = 0

@@ -269,7 +269,6 @@ class SlideshowSettings(QDialog, Ui_Dialog):
         self.increment_interval = self.increment_interval_spinner.value()
 
     def calculate_slideshow_time_left(self):
-        # total = 0 if self.increment_interval > 1 else self.speed_spinner.value()
         total = 0
         if self.increment_interval > 1:
             total = 0
@@ -310,14 +309,23 @@ class NotificationPopupWidget(QLabel):
         self.setTextFormat(Qt.RichText)
         self.setWordWrap(True)
         self.setAlignment(Qt.AlignCenter)
-        self.setStyleSheet("border: 2px solid blue; padding: 1px; background: DeepSkyBlue; color: blue; font-size: 24px")
+        self.setStyleSheet("border: 2px solid blue; "
+                           "padding: 1px; "
+                           "background: DeepSkyBlue; "
+                           "color: blue; "
+                           "font-size: 24px")
+
+        self.close_timer = QTimer(self, singleShot=True)
+        self.close_timer.timeout.connect(self.hide)
 
     def notify(self, msg, duration=3.5):
         self.setText(msg)
         self.adjustSize()
         self.show()
         if duration > 0:
-            QTimer.singleShot(duration * 1000, self.hide)
+            self.close_timer.start(duration * 1000)
+        else:
+            self.close_timer.stop()
 
     def mousePressEvent(self, event):
         self.hide()
