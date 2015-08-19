@@ -78,7 +78,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.sound = True  # is the sound turned on
         self.timer_visible = False
         self.force_toolbar_display = False
-        
+
         self.toolBar.hide()
 
         self.dirs = settings.value('dirs', '.')
@@ -214,7 +214,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
     def start_slideshow_timer(self, speed=0):
         if speed:
-            self.slideshow_timer.start(speed) 
+            self.slideshow_timer.start(speed)
         else:
             self.slideshow_timer.start(self.slideshow_settings.get_speed() * 1000)  # ms to s
 
@@ -232,7 +232,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
     def notify_slideshow_change(self):
         msg = "Turning it up to {}".format(get_time_from_secs(self.slideshow_settings._speed))
         if self.slideshow_settings.increment_checkbox.isChecked():
-            msg += " for {} images!\nTime left in slideshow: {}".format(self.slideshow_settings.increment_interval, 
+            msg += " for {} images!\nTime left in slideshow: {}".format(1 if self.slideshow_settings.increment_interval == 0 else self.slideshow_settings.increment_interval,
                                                                         get_time_from_secs(self.slideshow_settings.calculate_slideshow_time_left()))
         self.notification_widget.notify(msg)
 

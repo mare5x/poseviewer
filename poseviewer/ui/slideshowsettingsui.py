@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'poseviewer\ui\slideshowsettingsui.ui'
 #
-# Created: Tue Aug 18 17:50:30 2015
+# Created: Wed Aug 19 16:58:23 2015
 #      by: pyside-uic 0.2.15 running on PySide 1.2.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -13,8 +13,8 @@ class Ui_Dialog(object):
     def setupUi(self, Dialog):
         Dialog.setObjectName("Dialog")
         Dialog.setWindowModality(QtCore.Qt.ApplicationModal)
-        Dialog.resize(340, 180)
-        Dialog.setMinimumSize(QtCore.QSize(340, 180))
+        Dialog.resize(350, 190)
+        Dialog.setMinimumSize(QtCore.QSize(350, 190))
         self.gridLayout = QtGui.QGridLayout(Dialog)
         self.gridLayout.setObjectName("gridLayout")
         self.label = QtGui.QLabel(Dialog)
@@ -36,9 +36,9 @@ class Ui_Dialog(object):
         self.groupBox.setObjectName("groupBox")
         self.gridLayout_2 = QtGui.QGridLayout(self.groupBox)
         self.gridLayout_2.setObjectName("gridLayout_2")
-        self.slideshow_time_left_label = QtGui.QLabel(self.groupBox)
-        self.slideshow_time_left_label.setObjectName("slideshow_time_left_label")
-        self.gridLayout_2.addWidget(self.slideshow_time_left_label, 1, 0, 1, 1)
+        self.label_5 = QtGui.QLabel(self.groupBox)
+        self.label_5.setObjectName("label_5")
+        self.gridLayout_2.addWidget(self.label_5, 1, 0, 1, 1)
         self.increment_interval_spinner = QtGui.QSpinBox(self.groupBox)
         self.increment_interval_spinner.setMinimum(1)
         self.increment_interval_spinner.setMaximum(999999999)
@@ -48,16 +48,25 @@ class Ui_Dialog(object):
         self.label_2 = QtGui.QLabel(self.groupBox)
         self.label_2.setObjectName("label_2")
         self.gridLayout_2.addWidget(self.label_2, 0, 0, 1, 1)
+        self.label_4 = QtGui.QLabel(self.groupBox)
+        self.label_4.setObjectName("label_4")
+        self.gridLayout_2.addWidget(self.label_4, 2, 0, 1, 1)
+        self.total_images_label = QtGui.QLabel(self.groupBox)
+        self.total_images_label.setObjectName("total_images_label")
+        self.gridLayout_2.addWidget(self.total_images_label, 2, 1, 1, 1)
+        self.slideshow_time_left_label = QtGui.QLabel(self.groupBox)
+        self.slideshow_time_left_label.setObjectName("slideshow_time_left_label")
+        self.gridLayout_2.addWidget(self.slideshow_time_left_label, 1, 1, 1, 1)
         self.gridLayout.addWidget(self.groupBox, 4, 0, 1, 2)
         self.label_3 = QtGui.QLabel(Dialog)
         self.label_3.setObjectName("label_3")
         self.gridLayout.addWidget(self.label_3, 1, 0, 1, 1)
-        self.transition_interval_spinner = QtGui.QDoubleSpinBox(Dialog)
-        self.transition_interval_spinner.setReadOnly(False)
-        self.transition_interval_spinner.setSingleStep(0.5)
-        self.transition_interval_spinner.setProperty("value", 1.0)
-        self.transition_interval_spinner.setObjectName("transition_interval_spinner")
-        self.gridLayout.addWidget(self.transition_interval_spinner, 1, 1, 1, 1)
+        self.transition_speed_spinner = QtGui.QDoubleSpinBox(Dialog)
+        self.transition_speed_spinner.setReadOnly(False)
+        self.transition_speed_spinner.setSingleStep(0.5)
+        self.transition_speed_spinner.setProperty("value", 1.0)
+        self.transition_speed_spinner.setObjectName("transition_speed_spinner")
+        self.gridLayout.addWidget(self.transition_speed_spinner, 1, 1, 1, 1)
 
         self.retranslateUi(Dialog)
         QtCore.QObject.connect(self.increment_checkbox, QtCore.SIGNAL("toggled(bool)"), self.groupBox.setEnabled)
@@ -69,10 +78,13 @@ class Ui_Dialog(object):
         self.speed_spinner.setSuffix(QtGui.QApplication.translate("Dialog", " s", None, QtGui.QApplication.UnicodeUTF8))
         self.increment_checkbox.setText(QtGui.QApplication.translate("Dialog", "Increment slideshow speed?", None, QtGui.QApplication.UnicodeUTF8))
         self.groupBox.setTitle(QtGui.QApplication.translate("Dialog", "Increment settings", None, QtGui.QApplication.UnicodeUTF8))
-        self.slideshow_time_left_label.setText(QtGui.QApplication.translate("Dialog", "Slideshow time left: 00:00:30", None, QtGui.QApplication.UnicodeUTF8))
+        self.label_5.setText(QtGui.QApplication.translate("Dialog", "Slideshow time left: ", None, QtGui.QApplication.UnicodeUTF8))
         self.increment_interval_spinner.setSuffix(QtGui.QApplication.translate("Dialog", " image(s)", None, QtGui.QApplication.UnicodeUTF8))
         self.label_2.setText(QtGui.QApplication.translate("Dialog", "Enter increment interval: ", None, QtGui.QApplication.UnicodeUTF8))
+        self.label_4.setText(QtGui.QApplication.translate("Dialog", "Total amount of images in slideshow:", None, QtGui.QApplication.UnicodeUTF8))
+        self.total_images_label.setText(QtGui.QApplication.translate("Dialog", "0", None, QtGui.QApplication.UnicodeUTF8))
+        self.slideshow_time_left_label.setText(QtGui.QApplication.translate("Dialog", "00:00:00", None, QtGui.QApplication.UnicodeUTF8))
         self.label_3.setToolTip(QtGui.QApplication.translate("Dialog", "The slideshow will transition for this amount of seconds before going to the next image.", None, QtGui.QApplication.UnicodeUTF8))
         self.label_3.setText(QtGui.QApplication.translate("Dialog", "Image transition speed: ", None, QtGui.QApplication.UnicodeUTF8))
-        self.transition_interval_spinner.setSuffix(QtGui.QApplication.translate("Dialog", " s", None, QtGui.QApplication.UnicodeUTF8))
+        self.transition_speed_spinner.setSuffix(QtGui.QApplication.translate("Dialog", " s", None, QtGui.QApplication.UnicodeUTF8))
 

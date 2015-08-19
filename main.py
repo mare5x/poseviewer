@@ -11,3 +11,5 @@ if __name__ == '__main__':
 # TODO borderless window
 # TODO better slideshow (poseviewer trainer)
 # TODO during slideshow wait a bit before transitioning
+
+# TODO NO BEEP IN EXECUTABLE

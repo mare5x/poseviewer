@@ -232,10 +232,10 @@ class SlideshowSettings(QDialog, Ui_Dialog):
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)  # removes question mark
 
         self.speed_spinner.valueChanged.connect(self.get_speed)
-        self.speed_spinner.valueChanged.connect(self.update_slideshow_time_left)
+        self.speed_spinner.valueChanged.connect(self.update_slideshow_information_labels)
 
         self.increment_interval_spinner.valueChanged.connect(self.get_increment_speed)
-        self.increment_interval_spinner.valueChanged.connect(self.update_slideshow_time_left)
+        self.increment_interval_spinner.valueChanged.connect(self.update_slideshow_information_labels)
 
         self.slideshowComplete.connect(self.reset_settings)
 
@@ -269,15 +269,33 @@ class SlideshowSettings(QDialog, Ui_Dialog):
         self.increment_interval = self.increment_interval_spinner.value()
 
     def calculate_slideshow_time_left(self):
-        total = 0 if self.increment_interval > 1 else self.speed_spinner.value()
+        # total = 0 if self.increment_interval > 1 else self.speed_spinner.value()
+        total = 0
+        if self.increment_interval > 1:
+            total = 0
+        elif self.increment_interval == 0:
+            total = self.speed_spinner.value() * 2 ** self.increment_interval_spinner.value()
+        elif self.increment_interval == 1 and self.increment_interval_spinner.value() > 1:
+            total = self.speed_spinner.value() * 2 ** (self.increment_interval_spinner.value() - 1)
+        else:
+            total = self.speed_spinner.value()
+
         for i in range(1, self.increment_interval + 1):
             total += i * (self.speed_spinner.value() * 2 ** ((self.increment_interval_spinner.value() - i) + 1))
         return total
 
-    def update_slideshow_time_left(self):
-        self.slideshow_time_left_label.setText('Slideshow total time: {}'.format(get_time_from_secs(self.calculate_slideshow_time_left())))
+    def calculate_total_images(self):
+        return sum([i if i > 0 else 1 for i in range(self.increment_interval_spinner.value() + 1)])
+
+    def update_slideshow_information_labels(self):
+        self.slideshow_time_left_label.setText((get_time_from_secs(self.calculate_slideshow_time_left())))
+        self.total_images_label.setText(str(self.calculate_total_images()))
+
+    def get_transition_speed(self):
+        return self.transition_speed_spinner.value()
 
     def run(self):
+        self.update_slideshow_information_labels()
         return self.exec_()
 
 
@@ -294,7 +312,7 @@ class NotificationPopupWidget(QLabel):
         self.setAlignment(Qt.AlignCenter)
         self.setStyleSheet("border: 2px solid blue; padding: 1px; background: DeepSkyBlue; color: blue; font-size: 24px")
 
-    def notify(self, msg, duration=3):
+    def notify(self, msg, duration=3.5):
         self.setText(msg)
         self.adjustSize()
         self.show()

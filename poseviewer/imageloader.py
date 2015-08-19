@@ -11,7 +11,6 @@ class ImageLoaderThread(threading.Thread):
         super().__init__(*args, **kwargs)
 
         self._stop_event = threading.Event()
-        #self._first_image_ready = threading.Condition()
         self._first_image_ready = threading.Event()
 
         self.dir_path = dir_path

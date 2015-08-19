@@ -9,14 +9,14 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>340</width>
-    <height>180</height>
+    <width>350</width>
+    <height>190</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
-    <width>340</width>
-    <height>180</height>
+    <width>350</width>
+    <height>190</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -69,9 +69,9 @@
      </property>
      <layout class="QGridLayout" name="gridLayout_2">
       <item row="1" column="0">
-       <widget class="QLabel" name="slideshow_time_left_label">
+       <widget class="QLabel" name="label_5">
         <property name="text">
-         <string>Slideshow time left: 00:00:30</string>
+         <string>Slideshow time left: </string>
         </property>
        </widget>
       </item>
@@ -98,6 +98,27 @@
         </property>
        </widget>
       </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="label_4">
+        <property name="text">
+         <string>Total amount of images in slideshow:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QLabel" name="total_images_label">
+        <property name="text">
+         <string>0</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QLabel" name="slideshow_time_left_label">
+        <property name="text">
+         <string>00:00:00</string>
+        </property>
+       </widget>
+      </item>
      </layout>
     </widget>
    </item>
@@ -112,7 +133,7 @@
     </widget>
    </item>
    <item row="1" column="1">
-    <widget class="QDoubleSpinBox" name="transition_interval_spinner">
+    <widget class="QDoubleSpinBox" name="transition_speed_spinner">
      <property name="readOnly">
       <bool>false</bool>
      </property>
