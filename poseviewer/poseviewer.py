@@ -34,6 +34,8 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
         self.setCentralWidget(self.window)
 
+        self.notification_widget.notified.connect(self.activateWindow)
+
         self.slideshow_settings.slideshowComplete.connect(self.toggle_slideshow)
         self.slideshow_settings.slideshowComplete.connect(lambda: self.notification_widget.notify('Slideshow Complete!', duration=0))
         self.slideshow_settings.incrementIntervalChanged.connect(self.notify_slideshow_change)
@@ -88,6 +90,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.window_dimensions = self.geometry()  # remember the geometry for returning from fullscreen
         self.DEFAULT_PALETTE = self.palette()
 
+        self.centralWidget().layout().setContentsMargins(0, 0, 0, 0)
         qApp.installEventFilter(self)
 
     def get_directory(self):
@@ -265,7 +268,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
         settings['stars'] = self.starred_images
         if not self.list_image_viewer.string_list_model.stringList() == self.image_path.sequence:
-            self.list_image_viewer.display(self.starred_images)
+            self.list_image_viewer.display(self.starred_images, self.image_path.current)
             self.list_image_viewer.toggle_display()
 
     def set_window_title(self, title):
@@ -390,7 +393,7 @@ class ActionOptions:
                                                         action_group=self.path_actions)
 
         self.main_window.actionViewImages = self.create_action("View the current list of images", self.main_window,
-                                                      triggered=lambda: self.main_window.list_image_viewer.display(self.main_window.dirs),
+                                                      triggered=lambda: self.main_window.list_image_viewer.display(self.main_window.dirs, self.main_window.image_path.current),
                                                       enabled=True,
                                                       shortcut=QKeySequence.fromString("Alt+D"),
                                                       action_group=self.path_actions)
@@ -420,7 +423,7 @@ class ActionOptions:
 
         self.main_window.actionOpenStars = self.create_action("View starred images", self.main_window,
                                                      triggered=lambda: self.main_window.list_image_viewer.display(
-                                                         self.main_window.starred_images),
+                                                         self.main_window.starred_images, self.main_window.image_path.current),
                                                      enabled=True, shortcut=QKeySequence.fromString("Ctrl+Alt+D"),
                                                      action_group=self.stars_actions)
         # ------- /stars_actions -------

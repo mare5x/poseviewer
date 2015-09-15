@@ -1,10 +1,13 @@
 ﻿from PySide.QtCore import *
 from PySide.QtGui import *
+
 import os
 import scandir
+
+from .tables import *
 from .imageloader import *
 from .corewidgets import get_time_from_secs
-from .ui.slideshowsettingsui import Ui_Dialog
+from .ui.slideshowsettingsui import Ui_Dialog as SlideshowSettingsUi
 
 
 SUPPORTED_FORMATS_FILTER = ["*.BMP", "*.GIF", "*.JPG", "*.JPEG", "*.PNG", "*.PBM", "*.PGM", "*.PPM", "*.XBM", "*.XPM"]
@@ -46,6 +49,9 @@ class ImageCanvas(QGraphicsView):
     def draw_image(self, image_path, size=None):
         self.image_path = image_path
         pix_image = QPixmap(image_path)  # make pixmap
+        if pix_image.isNull():
+            return
+
         if size:
             pix_image = pix_image.scaled(size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
         self.pix_item.setPixmap(pix_image)
@@ -171,7 +177,7 @@ class ListImageViewer(QSplitter):
 
         self.image_loader_thread = ImageLoaderThread()
 
-    def display(self, path):
+    def display(self, path, item=None):
         self.previous_model = self.tree_view.model()
         if type(path) == list:
             self.tree_view.setModel(self.string_list_model)
@@ -180,6 +186,9 @@ class ListImageViewer(QSplitter):
             self.tree_view.setModel(self.files_system_model)
             self.tree_view.setRootIndex(self.files_system_model.setRootPath(path))
 
+        if item:
+            self.find_and_select(item)
+
         if self.previous_model == self.tree_view.model() or not self.is_displayed:
             self.toggle_display()
             QTimer.singleShot(0, self.listImageViewerToggled.emit)  # waits for widget to show/hide before emitting
@@ -187,11 +196,43 @@ class ListImageViewer(QSplitter):
     def toggle_display(self):
         self.is_displayed = not self.is_displayed
         self.setVisible(self.is_displayed)
+        self.setFocus(Qt.ActiveWindowFocusReason)
+
+    def find_and_select(self, item):
+        found_item = self.find_item_index(item)
+        if found_item:
+            self.scroll_to_index(found_item)
+
+    def find_item_index(self, path):
+        model = self.tree_view.model()
+        # print(path)
+        if model == self.string_list_model:
+            found = model.match(model.index(0, 0), Qt.DisplayRole, path, 1, Qt.MatchRecursive|Qt.MatchWrap|Qt.MatchContains)
+            # print(found)
+            if found:
+                return found[0]
+        else:
+            found = self.files_system_model.index(path)
+            # print(found)
+            if found.isValid():
+                return found
+        return None
+
+    def select_and_scroll_to(self, index):
+        self.scroll_to_index(index)
+        self.select_index(index)
+
+    def select_index(self, index):
+        self.tree_view.selectionModel().select(index, QItemSelectionModel.Select | QItemSelectionModel.Rows)
+        self.tree_view.setCurrentIndex(index)
+
+    def scroll_to_index(self, index):
+        QTimer.singleShot(0, lambda: self.tree_view.scrollTo(index))
 
     def currentChanged(self, current, previous):
         """Reimplemented function from QTreeView"""
         self.paint_thumbnail(current)
-        self.tree_view.scrollTo(current)
+        self.select_and_scroll_to(current)
 
     def paint_thumbnail(self, index):
         image_path = self.string_list_model.data(index, 0) if self.tree_view.model() == self.string_list_model \
@@ -221,15 +262,18 @@ class ListImageViewer(QSplitter):
             QTimer.singleShot(0, lambda: self.setDefaultSequence.emit(self.string_list_model.stringList()))
 
 
-class SlideshowSettings(QDialog, Ui_Dialog):
+class SlideshowSettings(QDialog, SlideshowSettingsUi):
     slideshowComplete = Signal()
     incrementIntervalChanged = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setupUi(self)  # Ui_Dialog
+        self.setupUi(self)  # SlideshowSettingsUi
 
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)  # removes question mark
+
+        self.time_edit_table.horizontalHeader().show() # fix bug in designer
+        self.time_edit_table.verticalHeader().show()
 
         self.speed_spinner.valueChanged.connect(self.get_speed)
         self.speed_spinner.valueChanged.connect(self.update_slideshow_information_labels)
@@ -242,6 +286,7 @@ class SlideshowSettings(QDialog, Ui_Dialog):
         self._speed = self.get_speed()
         self.slideshow_counter = 1  # current index of slideshow
         self.increment_interval = self.increment_interval_spinner.value()  # change speed length speed (by images)
+
 
     def get_speed(self):
         self._speed = self.speed_spinner.value()
@@ -299,6 +344,8 @@ class SlideshowSettings(QDialog, Ui_Dialog):
 
 
 class NotificationPopupWidget(QLabel):
+    notified = Signal()
+
     def __init__(self, parent=None, position=None):
         super().__init__(parent)
         self.setWindowFlags(Qt.SplashScreen|Qt.WindowStaysOnTopHint|Qt.FramelessWindowHint)
@@ -326,6 +373,8 @@ class NotificationPopupWidget(QLabel):
             self.close_timer.start(duration * 1000)
         else:
             self.close_timer.stop()
+
+        self.notified.emit()
 
     def mousePressEvent(self, event):
         self.hide()

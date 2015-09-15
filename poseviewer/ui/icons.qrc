@@ -14,5 +14,7 @@
      <file>../Icons/timer.png</file>
      <file>../Icons/windowicon.png</file>
      <file>../Icons/stop.png</file>
+     <file>../Icons/plus.png</file>
+     <file>../Icons/minus.png</file>
  </qresource>
  </RCC>
