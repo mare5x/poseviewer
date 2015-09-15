@@ -1,0 +1,506 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Dialog</class>
+ <widget class="QDialog" name="Dialog">
+  <property name="windowModality">
+   <enum>Qt::ApplicationModal</enum>
+  </property>
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>350</width>
+    <height>240</height>
+   </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>350</width>
+    <height>240</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>Slideshow settings</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <property name="leftMargin">
+    <number>9</number>
+   </property>
+   <property name="topMargin">
+    <number>9</number>
+   </property>
+   <property name="rightMargin">
+    <number>9</number>
+   </property>
+   <property name="bottomMargin">
+    <number>9</number>
+   </property>
+   <property name="horizontalSpacing">
+    <number>6</number>
+   </property>
+   <item row="1" column="1">
+    <widget class="QDoubleSpinBox" name="transition_speed_spinner">
+     <property name="readOnly">
+      <bool>false</bool>
+     </property>
+     <property name="suffix">
+      <string> s</string>
+     </property>
+     <property name="singleStep">
+      <double>0.500000000000000</double>
+     </property>
+     <property name="value">
+      <double>1.000000000000000</double>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QLabel" name="label_3">
+     <property name="toolTip">
+      <string>The slideshow will transition for this amount of seconds before going to the next image.</string>
+     </property>
+     <property name="text">
+      <string>Image transition speed: </string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="0" colspan="2">
+    <widget class="QTabWidget" name="tab_widget">
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <widget class="QWidget" name="tab_1">
+      <attribute name="title">
+       <string>Preset 1</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_4">
+       <item row="0" column="0">
+        <widget class="QLabel" name="label">
+         <property name="text">
+          <string>Slideshow speed: </string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QSpinBox" name="speed_spinner">
+         <property name="frame">
+          <bool>true</bool>
+         </property>
+         <property name="suffix">
+          <string> s</string>
+         </property>
+         <property name="minimum">
+          <number>1</number>
+         </property>
+         <property name="maximum">
+          <number>999999999</number>
+         </property>
+         <property name="singleStep">
+          <number>5</number>
+         </property>
+         <property name="value">
+          <number>30</number>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QCheckBox" name="increment_checkbox">
+         <property name="text">
+          <string>Increment slideshow speed?</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0" colspan="2">
+        <widget class="QGroupBox" name="groupBox">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="title">
+          <string>Increment settings</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_2">
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_5">
+            <property name="text">
+             <string>Slideshow time left: </string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QSpinBox" name="increment_interval_spinner">
+            <property name="suffix">
+             <string> image(s)</string>
+            </property>
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>999999999</number>
+            </property>
+            <property name="value">
+             <number>5</number>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_2">
+            <property name="text">
+             <string>Enter increment interval: </string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_4">
+            <property name="text">
+             <string>Total amount of images in slideshow:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QLabel" name="total_images_label">
+            <property name="text">
+             <string>0</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QLabel" name="slideshow_time_left_label">
+            <property name="text">
+             <string>00:00:00</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab_2">
+      <attribute name="title">
+       <string>Preset 2</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_3">
+       <item row="0" column="0">
+        <widget class="QLabel" name="label_6">
+         <property name="text">
+          <string>Total time:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QTimeEdit" name="total_time_edit">
+         <property name="readOnly">
+          <bool>false</bool>
+         </property>
+         <property name="buttonSymbols">
+          <enum>QAbstractSpinBox::UpDownArrows</enum>
+         </property>
+         <property name="specialValueText">
+          <string/>
+         </property>
+         <property name="accelerated">
+          <bool>false</bool>
+         </property>
+         <property name="currentSection">
+          <enum>QDateTimeEdit::MinuteSection</enum>
+         </property>
+         <property name="displayFormat">
+          <string>H:mm:ss</string>
+         </property>
+         <property name="currentSectionIndex">
+          <number>1</number>
+         </property>
+         <property name="time">
+          <time>
+           <hour>0</hour>
+           <minute>20</minute>
+           <second>0</second>
+          </time>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0" colspan="2">
+        <widget class="TimeEditTable" name="time_edit_table">
+         <property name="rowCount">
+          <number>3</number>
+         </property>
+         <property name="columnCount">
+          <number>2</number>
+         </property>
+         <attribute name="horizontalHeaderVisible">
+          <bool>false</bool>
+         </attribute>
+         <attribute name="horizontalHeaderCascadingSectionResizes">
+          <bool>true</bool>
+         </attribute>
+         <attribute name="horizontalHeaderShowSortIndicator" stdset="0">
+          <bool>false</bool>
+         </attribute>
+         <attribute name="horizontalHeaderStretchLastSection">
+          <bool>true</bool>
+         </attribute>
+         <attribute name="verticalHeaderVisible">
+          <bool>false</bool>
+         </attribute>
+         <attribute name="verticalHeaderCascadingSectionResizes">
+          <bool>true</bool>
+         </attribute>
+         <attribute name="verticalHeaderStretchLastSection">
+          <bool>true</bool>
+         </attribute>
+         <row/>
+         <row/>
+         <row/>
+         <column>
+          <property name="text">
+           <string>Description</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Value</string>
+          </property>
+         </column>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QPushButton" name="add_time_edit_table_row">
+         <property name="toolTip">
+          <string>Add row</string>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset resource="icons.qrc">
+           <normaloff>:/Icons/Icons/plus.png</normaloff>:/Icons/Icons/plus.png</iconset>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QPushButton" name="remove_time_edit_table_row">
+         <property name="toolTip">
+          <string>Remove row</string>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset resource="icons.qrc">
+           <normaloff>:/Icons/Icons/minus.png</normaloff>:/Icons/Icons/minus.png</iconset>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab_3">
+      <attribute name="title">
+       <string>Preset 3</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_6">
+       <item row="2" column="0">
+        <widget class="QPushButton" name="add_value_table_row">
+         <property name="toolTip">
+          <string>Add row</string>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset resource="icons.qrc">
+           <normaloff>:/Icons/Icons/plus.png</normaloff>:/Icons/Icons/plus.png</iconset>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QPushButton" name="remove_value_table_row">
+         <property name="toolTip">
+          <string>Remove row</string>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset resource="icons.qrc">
+           <normaloff>:/Icons/Icons/minus.png</normaloff>:/Icons/Icons/minus.png</iconset>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0" colspan="2">
+        <widget class="ValueTable" name="value_table">
+         <property name="rowCount">
+          <number>3</number>
+         </property>
+         <property name="columnCount">
+          <number>2</number>
+         </property>
+         <attribute name="horizontalHeaderVisible">
+          <bool>false</bool>
+         </attribute>
+         <attribute name="horizontalHeaderCascadingSectionResizes">
+          <bool>true</bool>
+         </attribute>
+         <attribute name="horizontalHeaderShowSortIndicator" stdset="0">
+          <bool>false</bool>
+         </attribute>
+         <attribute name="horizontalHeaderStretchLastSection">
+          <bool>true</bool>
+         </attribute>
+         <attribute name="verticalHeaderVisible">
+          <bool>false</bool>
+         </attribute>
+         <attribute name="verticalHeaderCascadingSectionResizes">
+          <bool>true</bool>
+         </attribute>
+         <attribute name="verticalHeaderStretchLastSection">
+          <bool>true</bool>
+         </attribute>
+         <row/>
+         <row/>
+         <row/>
+         <column>
+          <property name="text">
+           <string>Number of images</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Value</string>
+          </property>
+         </column>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="label_7">
+         <property name="text">
+          <string>Total time:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <widget class="QLabel" name="total_time_value_table">
+         <property name="text">
+          <string>00:00:00</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>TimeEditTable</class>
+   <extends>QTableWidget</extends>
+   <header>..tables</header>
+   <slots>
+    <slot>remove_row()</slot>
+    <slot>insert_row()</slot>
+   </slots>
+  </customwidget>
+  <customwidget>
+   <class>ValueTable</class>
+   <extends>QTableWidget</extends>
+   <header>..tables</header>
+   <slots>
+    <slot>insert_row()</slot>
+    <slot>remove_row()</slot>
+   </slots>
+  </customwidget>
+ </customwidgets>
+ <tabstops>
+  <tabstop>tab_widget</tabstop>
+  <tabstop>transition_speed_spinner</tabstop>
+  <tabstop>add_time_edit_table_row</tabstop>
+  <tabstop>speed_spinner</tabstop>
+  <tabstop>increment_interval_spinner</tabstop>
+  <tabstop>increment_checkbox</tabstop>
+ </tabstops>
+ <resources>
+  <include location="icons.qrc"/>
+ </resources>
+ <connections>
+  <connection>
+   <sender>increment_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>groupBox</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>54</x>
+     <y>82</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>111</x>
+     <y>92</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>remove_time_edit_table_row</sender>
+   <signal>clicked()</signal>
+   <receiver>time_edit_table</receiver>
+   <slot>remove_row()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>213</x>
+     <y>177</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>203</x>
+     <y>91</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>add_time_edit_table_row</sender>
+   <signal>clicked()</signal>
+   <receiver>time_edit_table</receiver>
+   <slot>insert_row()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>65</x>
+     <y>174</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>78</x>
+     <y>90</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>add_value_table_row</sender>
+   <signal>clicked()</signal>
+   <receiver>value_table</receiver>
+   <slot>insert_row()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>94</x>
+     <y>157</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>97</x>
+     <y>82</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>remove_value_table_row</sender>
+   <signal>clicked()</signal>
+   <receiver>value_table</receiver>
+   <slot>remove_row()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>240</x>
+     <y>150</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>245</x>
+     <y>75</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>
