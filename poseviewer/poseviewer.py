@@ -348,11 +348,12 @@ class ActionOptions:
         self.add_actions()
 
     def add_actions(self):
-        self.add_actions_to(self.path_actions, self.main_window)
-        self.add_actions_to(self.random_actions, self.main_window)
-        self.add_actions_to(self.stars_actions, self.main_window)
-        self.add_actions_to(self.misc_actions, self.main_window)
-        self.add_actions_to(self.slideshow_actions, self.main_window)
+        self.main_window.addActions(self.path_actions.actions())
+        self.main_window.addActions(self.random_actions.actions())
+        self.main_window.addActions(self.stars_actions.actions())
+        self.main_window.addActions(self.misc_actions.actions())
+        self.main_window.addActions(self.slideshow_actions.actions())
+        self.main_window.addActions(self.image_actions.actions())
 
         self.main_window.addAction(self.main_window.actionOpen)
         self.main_window.addAction(self.main_window.actionFullscreen)
@@ -368,20 +369,23 @@ class ActionOptions:
         # ------- image_actions -------
         self.main_window.image_canvas.actionFlipUpDown = self.create_action("Flip upside down", self.main_window,
                                                                    triggered=self.main_window.image_canvas.flip_upside_down,
-                                                                   enabled=False, checkable=True,
+                                                                   enabled=False, checkable=True, shortcut=QKeySequence('Q'),
                                                                    action_group=self.image_actions)
         self.main_window.image_canvas.actionMirror = self.create_action("Mirror image", self.main_window,
-                                                               triggered=self.main_window.image_canvas.mirror,
+                                                               triggered=self.main_window.image_canvas.mirror, shortcut=QKeySequence('W'),
                                                                enabled=False, checkable=True,
                                                                action_group=self.image_actions)
         self.main_window.image_canvas.actionRotateRight = self.create_action("Rotate image right", self.main_window,
                                                                     triggered=self.main_window.image_canvas.rotate_right,
-                                                                    enabled=False, action_group=self.image_actions)
+                                                                    enabled=False, shortcut=QKeySequence('E'),
+                                                                    action_group=self.image_actions)
         self.main_window.image_canvas.actionRotateLeft = self.create_action("Rotate image left", self.main_window,
                                                                    triggered=self.main_window.image_canvas.rotate_left,
-                                                                   enabled=False, action_group=self.image_actions)
+                                                                   enabled=False, shortcut=QKeySequence('R'),
+                                                                   action_group=self.image_actions)
         self.main_window.image_canvas.actionNormal = self.create_action("Normal fit", self.main_window,
                                                                triggered=self.main_window.image_canvas.normal, enabled=False,
+                                                               shortcut=QKeySequence('2'),
                                                                action_group=self.image_actions)
         self.main_window.image_canvas.actionSave = self.create_action("Save", self.main_window, triggered=self.main_window.save_image,
                                                              enabled=False, action_group=self.image_actions)
@@ -395,7 +399,7 @@ class ActionOptions:
         self.main_window.actionViewImages = self.create_action("View the current list of images", self.main_window,
                                                       triggered=lambda: self.main_window.list_image_viewer.display(self.main_window.dirs, self.main_window.image_path.current),
                                                       enabled=True,
-                                                      shortcut=QKeySequence.fromString("Alt+D"),
+                                                      shortcut=QKeySequence("Alt+D"),
                                                       action_group=self.path_actions)
         # ------- /path_actions --------
 
@@ -403,28 +407,28 @@ class ActionOptions:
         self.main_window.actionPreviousRandom = self.create_action("Undo random", self.main_window,
                                                           triggered=self.main_window.image_path.previous_random,
                                                           enabled=False,
-                                                          shortcut=QKeySequence.fromString("Shift+F5"),
+                                                          shortcut=QKeySequence("Shift+F5"),
                                                           action_group=self.random_actions)
         self.main_window.actionShuffle = self.create_action("Shuffle images", self.main_window, triggered=self.main_window.image_path.shuffle,
-                                                   enabled=False, shortcut=QKeySequence.fromString("Ctrl+F5"),
+                                                   enabled=False, shortcut=QKeySequence("Ctrl+F5"),
                                                    action_group=self.random_actions)
         self.main_window.actionPreviousShuffle = self.create_action("Undo shuffle", self.main_window,
                                                            triggered=self.main_window.image_path.previous_shuffle,
                                                            enabled=False,
-                                                           shortcut=QKeySequence.fromString("Shift+Ctrl+F5"),
+                                                           shortcut=QKeySequence("Shift+Ctrl+F5"),
                                                            action_group=self.random_actions)
         # ------- /random_actions ------
 
         # ------- stars_actions --------
         self.main_window.actionStar = self.create_action("Star this image", self.main_window,
                                                 triggered=self.main_window.star_image, enabled=False,
-                                                shortcut=QKeySequence.fromString("Ctrl+D"),
+                                                shortcut=QKeySequence("Ctrl+D"),
                                                 action_group=self.stars_actions)
 
         self.main_window.actionOpenStars = self.create_action("View starred images", self.main_window,
                                                      triggered=lambda: self.main_window.list_image_viewer.display(
                                                          self.main_window.starred_images, self.main_window.image_path.current),
-                                                     enabled=True, shortcut=QKeySequence.fromString("Ctrl+Alt+D"),
+                                                     enabled=True, shortcut=QKeySequence("Ctrl+Alt+D"),
                                                      action_group=self.stars_actions)
         # ------- /stars_actions -------
 
@@ -441,10 +445,6 @@ class ActionOptions:
         for action in actions.actions():
             action.setEnabled(True)
 
-    def add_actions_to(self, actions, obj):
-        for action in actions.actions():
-            obj.addAction(action)
-
     def enable_all_actions(self):
         self.main_window.actionSound.setEnabled(True)
         self.main_window.actionTimer.setEnabled(True)
@@ -457,25 +457,25 @@ class ActionOptions:
 
     def add_to_context_menu(self, menu):
         menu.addAction(self.main_window.actionOpen)
-        self.add_actions_to(self.path_actions, menu)
+        menu.addActions(self.path_actions.actions())
         menu.addAction(self.main_window.actionFullscreen)
         menu.addSeparator()
 
-        self.add_actions_to(self.slideshow_actions, menu)
+        menu.addActions(self.slideshow_actions.actions())
         menu.addSeparator()
 
-        self.add_actions_to(self.random_actions, menu)
+        menu.addActions(self.random_actions.actions())
         menu.addAction(self.main_window.actionSound)
         menu.addAction(self.main_window.actionTimer)
         menu.addSeparator()
 
-        self.add_actions_to(self.image_actions, menu)
+        menu.addActions(self.image_actions.actions())
 
         menu.addSeparator()
-        self.add_actions_to(self.misc_actions, menu)
+        menu.addActions(self.misc_actions.actions())
 
         menu.addSeparator()
-        self.add_actions_to(self.stars_actions, menu)
+        menu.addActions(self.stars_actions.actions())
 
 
 def run():
