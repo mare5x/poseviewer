@@ -26,6 +26,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.list_image_viewer = ListImageViewer(parent=self)
         self.action_options = ActionOptions(self)
         self.slideshow_settings = SlideshowSettings(self)
+        self.slideshow = Slideshow(self)
 
         self.gridLayout.addWidget(self.image_canvas)
         self.gridLayout.addWidget(self.list_image_viewer)
@@ -36,9 +37,9 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
         self.notification_widget.notified.connect(self.activateWindow)
 
-        self.slideshow_settings.slideshowComplete.connect(self.toggle_slideshow)
-        self.slideshow_settings.slideshowComplete.connect(lambda: self.notification_widget.notify('Slideshow Complete!', duration=0))
-        self.slideshow_settings.incrementIntervalChanged.connect(self.notify_slideshow_change)
+        self.slideshow.slideshowComplete.connect(self.toggle_slideshow)
+        self.slideshow.slideshowComplete.connect(lambda: self.notification_widget.notify('Slideshow Complete!', duration=0))
+        self.slideshow.incrementIntervalChanged.connect(self.notify_slideshow_change)
 
         self.image_path.imageChanged.connect(self.prepare_image)
         self.image_path.sequenceChanged.connect(self.action_options.enable_all_actions)
@@ -48,8 +49,6 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.list_image_viewer.starImage.connect(self.star_image)
         self.list_image_viewer.setDefaultSequence.connect(lambda seq: self.image_path.set_sequence(seq))
 
-        self.slideshow_timer = QTimer(self, singleShot=True)  # make a timer ready to be used
-        self.slideshow_timer_elapsed = QTime()
         self.time_elapsed_timer = TimeElapsedTimer(self)
         self.totalTimeElapsed = QElapsedTimer()  # keep a track of the whole time spent in app
         self.totalTimeElapsed.start()
@@ -71,11 +70,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.actionTimer.triggered.connect(self.toggle_label_timer)  # toggle timer display
 
         self.time_elapsed_timer.secElapsed.connect(self.update_timerLabel)  # update the timer label every second
-        self.slideshow_timer.timeout.connect(self.next_image)  # every slide_speed seconds show image
-        self.slideshow_timer.timeout.connect(self.slideshow_timer_elapsed.restart)
 
-        self.slideshow_active = False  # is the slideshow playing
-        self.slideshow_time_left = 0
         self.sound = True  # is the sound turned on
         self.timer_visible = False
         self.force_toolbar_display = False
@@ -128,13 +123,8 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         """
         self.image_path.next()
 
-        if self.sound and self.slideshow_active:
+        if self.sound and self.slideshow.is_active():
             self.beep()
-
-        if self.slideshow_settings.increment_checkbox.isChecked() and self.slideshow_active:
-            self.start_slideshow_timer(self.slideshow_settings.increment_speed() * 1000)
-        elif self.slideshow_active:
-            self.slideshow_timer.start()
 
     def paint_background(self, widget, qcolor, full_background=False):
         if full_background:
@@ -169,20 +159,16 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
     def toggle_slideshow(self):
         """Deals with starting/stopping the slideshow.
         """
-        if self.slideshow_active:  # if it's playing, stop it
+        if self.slideshow.is_active():  # if it's playing, stop it
             self.set_icon(":/Icons/Icons/play.png", self.actionPlay)
-            self.slideshow_timer.stop()
         else:  # if it's not playing, play it
             self.beep()
             self.set_icon(":/Icons/Icons/stop.png", self.actionPlay)
-            self.slideshow_settings.reset_settings()
             self.notify_slideshow_change()
-            self.slideshow_timer_elapsed.start()
             self.time_elapsed_timer.set_time_to_zero()
-            self.start_slideshow_timer()
 
-        self.slideshow_active = not self.slideshow_active
-        self.actionPause.setEnabled(self.slideshow_active)
+        self.slideshow.toggle()
+        self.actionPause.setEnabled(self.slideshow.is_active())
 
     def toggle_sound(self):
         """
@@ -215,27 +201,11 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
         self.update_image()
 
-    def start_slideshow_timer(self, speed=0):
-        if speed:
-            self.slideshow_timer.start(speed)
-        else:
-            self.slideshow_timer.start(self.slideshow_settings.get_speed() * 1000)  # ms to s
-
     def pause_slideshow(self):
-        if self.actionPause.isChecked() and self.slideshow_active:
-            self.slideshow_time_left = self.slideshow_timer.interval() - self.slideshow_timer_elapsed.elapsed()
-            self.slideshow_timer.stop()
-            self.slideshow_active = False
-        else:
-            QTimer.singleShot(self.slideshow_time_left, self.next_image)
-            QTimer.singleShot(self.slideshow_time_left, self.slideshow_timer.start)
-            self.slideshow_active = True
+        pass
 
     def notify_slideshow_change(self):
-        msg = "Turning it up to {}".format(get_time_from_secs(self.slideshow_settings._speed))
-        if self.slideshow_settings.increment_checkbox.isChecked():
-            msg += " for {} images!\nTime left in slideshow: {}".format(1 if self.slideshow_settings.increment_interval == 0 else self.slideshow_settings.increment_interval,
-                                                                        get_time_from_secs(self.slideshow_settings.calculate_slideshow_time_left()))
+        msg = self.slideshow.format_change_message()
         self.notification_widget.notify(msg)
 
     @staticmethod
@@ -245,14 +215,14 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
     def update_timerLabel(self):
         if self.timer_visible:
-            if self.slideshow_active:
-                self.timerLabel.setText(get_time_from_secs(self.slideshow_settings._speed - self.time_elapsed_timer.secs_elapsed))
+            if self.slideshow.is_active():
+                self.timerLabel.setText(format_secs(self.slideshow.speed - self.time_elapsed_timer.secs_elapsed))
             else:
                 self.timerLabel.setText(self.time_elapsed_timer.get_time_elapsed())
 
     def show_stats(self):
         QMessageBox.information(self, 'Stats',
-                                'Total time in app: ' + get_time_from_secs(self.totalTimeElapsed.elapsed() / 1000))
+                                'Total time in app: ' + format_secs(self.totalTimeElapsed.elapsed() / 1000))
 
     def open_in_folder(self):
         subprocess.Popen(r'explorer /select,{}'.format(self.image_path.current))

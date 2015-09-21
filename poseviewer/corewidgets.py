@@ -6,7 +6,7 @@ import random
 from .imageloader import *
 
 
-def get_time_from_secs(secs, pretty=True):
+def format_secs(secs, pretty=True):
     """
     Calculate hours, minutes, seconds from seconds.
     Return tuple (h, min, s)
@@ -180,7 +180,7 @@ class TimeElapsedTimer(QObject):
         """
         Calculate elapsed hours, minutes, seconds.
         """
-        return get_time_from_secs(self.secs_elapsed)
+        return format_secs(self.secs_elapsed)
 
     def set_time_to_zero(self):
         self.secs_elapsed = 0

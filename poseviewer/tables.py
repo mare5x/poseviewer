@@ -1,5 +1,5 @@
 from PySide import QtCore, QtGui
-from .corewidgets import secs_from_qtime, get_time_from_secs
+from .corewidgets import secs_from_qtime, format_secs
 
 
 class SpinBoxDelegate(QtGui.QStyledItemDelegate):
@@ -126,4 +126,4 @@ class ImagesTimeTable(BaseTable):
         return total
 
     def get_total_time_string(self):
-        return get_time_from_secs(self.calculate_total_time())
+        return format_secs(self.calculate_total_time())
