@@ -2,9 +2,6 @@ from PySide import QtCore, QtGui
 from .corewidgets import secs_from_qtime, get_time_from_secs
 
 
-# Item = namedtuple('Item', 'column widget')
-
-
 class SpinBoxDelegate(QtGui.QStyledItemDelegate):
     def __init__(self, **attributes):
         super().__init__()
@@ -77,51 +74,6 @@ class BaseTable(QtGui.QTableWidget):
         return self.removeRow(self.currentRow())
 
 
-    # def make_row(self, row):
-    #     for item in self.row_template():
-    #         self.setCellWidget(row, item.column, item.widget)
-
-    # def row_template(self):
-    #     """Implement in subclass."""
-    #     pass
-
-    # def make_connections(self):
-    #     """Implement in subclass."""
-    #     pass
-
-    # @staticmethod
-    # def default_cell_widget():
-    #     """Implement in subclass."""
-    #     pass
-
-    # def add_widget_to_cell(self, row, column, func=None):
-    #     widget = func() if func else self.default_cell_widget()
-    #     self.setCellWidget(row, column, widget)
-
-    # def init_table_columns(self, column, func=None):
-    #     for row in range(self.rowCount()):
-    #         if func:
-    #             self.add_widget_to_cell(row, column, func)
-    #         else:
-    #             self.add_widget_to_cell(row, column, self.default_cell_widget)
-
-    # def get_all_cell_widgets_rows(self):
-    #     all_widgets = []
-    #     for row in range(self.rowCount()):
-    #         row_widgets = []
-    #         for column in range(self.columnCount()):
-    #             if self.cellWidget(row, column): row_widgets.append(self.cellWidget(row, column))
-    #         all_widgets.append(row_widgets)
-    #     return all_widgets
-
-    # def all_cell_widgets(self):
-    #     all_widgets = []
-    #     for row in range(self.rowCount()):
-    #         for column in range(self.columnCount()):
-    #             if self.cellWidget(row, column): all_widgets.append(self.cellWidget(row, column))
-    #     return all_widgets
-
-
 class TotalTimeTable(BaseTable):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -137,22 +89,6 @@ class TotalTimeTable(BaseTable):
         row = super().insert_row()
         index = self.model().index(row, 1)
         self.model().setData(index, "00:00:30")
-
-
-        # self.init_table_columns(1, self.default_cell_widget)
-        # self.make_connections()
-
-    # def make_connections(self):
-    #     for row in self.get_all_cell_widgets_rows():
-    #         for widget in row:
-    #             widget.timeChanged.connect(lambda: print(widget), type=Qt.UniqueConnection)
-
-    # def row_template(self):
-    #     return Item(column=1, widget=self.default_cell_widget()),
-
-    # @staticmethod
-    # def default_cell_widget():
-    #     return QTimeEdit(time=QTime(0, 5), currentSection=QDateTimeEdit.MinuteSection)
 
 
 class ImagesTimeTable(BaseTable):
@@ -179,30 +115,6 @@ class ImagesTimeTable(BaseTable):
         row = super().insert_row()
         self.model().setData(self.model().index(row, 0), 5)
         self.model().setData(self.model().index(row, 1), "00:01:00")
-
-
-    #     self.init_table_columns(1, self.time_edit)
-    #     self.init_table_columns(0, self.default_cell_widget)
-    #     self.make_connections()
-
-    # def make_connections(self):
-    #     for row in self.get_all_cell_widgets_rows():
-    #         for widget in row:
-    #             if isinstance(widget, QSpinBox):
-    #                 widget.valueChanged.connect(lambda: print(widget), type=Qt.UniqueConnection)
-    #             elif isinstance(widget, QTimeEdit):
-    #                 widget.timeChanged.connect(lambda: print(widget), type=Qt.UniqueConnection)
-
-    # def row_template(self):
-    #     return Item(column=1, widget=self.time_edit()), Item(column=0, widget=self.default_cell_widget())
-
-    # @staticmethod
-    # def default_cell_widget():
-    #     return QSpinBox(suffix=" images", value=5)
-
-    # @staticmethod
-    # def time_edit():
-    #     return QTimeEdit(time=QTime(0, 1), currentSection=QDateTimeEdit.MinuteSection)
 
     def calculate_total_time(self):
         total = 0
