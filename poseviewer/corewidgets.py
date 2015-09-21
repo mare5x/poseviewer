@@ -20,6 +20,10 @@ def get_time_from_secs(secs, pretty=True):
         return hours, mins, secs
 
 
+def secs_from_qtime(qtime):
+    return (qtime.hour() * 3600) + (qtime.minute() * 60) + qtime.second() + (qtime.msec() / 1000)
+
+
 class Settings(QSettings):
     def __init__(self, *args, parent=None, **kwargs):
         super().__init__(*args, parent=parent, **kwargs)
