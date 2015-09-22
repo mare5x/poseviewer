@@ -9,14 +9,14 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>350</width>
-    <height>240</height>
+    <width>440</width>
+    <height>306</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
-    <width>350</width>
-    <height>240</height>
+    <width>440</width>
+    <height>305</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -24,310 +24,350 @@
   </property>
   <layout class="QGridLayout" name="gridLayout">
    <property name="margin">
-    <number>9</number>
+    <number>3</number>
    </property>
-   <property name="horizontalSpacing">
-    <number>6</number>
+   <property name="spacing">
+    <number>2</number>
    </property>
-   <item row="1" column="1">
-    <widget class="QDoubleSpinBox" name="transition_speed_spinner">
-     <property name="readOnly">
-      <bool>false</bool>
-     </property>
-     <property name="suffix">
-      <string> s</string>
-     </property>
-     <property name="singleStep">
-      <double>0.500000000000000</double>
-     </property>
-     <property name="value">
-      <double>1.000000000000000</double>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="0">
-    <widget class="QLabel" name="label_3">
-     <property name="toolTip">
-      <string>The slideshow will transition for this amount of seconds before going to the next image.</string>
-     </property>
-     <property name="text">
-      <string>Image transition speed: </string>
-     </property>
-    </widget>
-   </item>
-   <item row="0" column="0" colspan="2">
-    <widget class="QTabWidget" name="tab_widget">
+   <item row="0" column="0">
+    <widget class="QTabWidget" name="settings_tabs">
      <property name="currentIndex">
       <number>0</number>
      </property>
-     <widget class="QWidget" name="tab_1">
+     <widget class="QWidget" name="slideshow_settings_tab">
       <attribute name="title">
-       <string>Preset 1</string>
+       <string>Slideshow Settings</string>
       </attribute>
-      <layout class="QGridLayout" name="gridLayout_4">
-       <item row="0" column="0">
-        <widget class="QLabel" name="label">
-         <property name="text">
-          <string>Slideshow speed: </string>
+      <layout class="QGridLayout" name="gridLayout_5">
+       <item row="0" column="0" colspan="2">
+        <widget class="QTabWidget" name="preset_tabs">
+         <property name="currentIndex">
+          <number>0</number>
          </property>
+         <widget class="QWidget" name="tab_1">
+          <attribute name="title">
+           <string>Preset 1</string>
+          </attribute>
+          <layout class="QGridLayout" name="gridLayout_4">
+           <item row="0" column="0">
+            <widget class="QLabel" name="label">
+             <property name="text">
+              <string>Slideshow speed: </string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="0">
+            <widget class="QCheckBox" name="increment_speed_checkbox">
+             <property name="text">
+              <string>Increment slideshow speed?</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="0" colspan="2">
+            <widget class="QGroupBox" name="groupBox">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="title">
+              <string>Increment settings</string>
+             </property>
+             <layout class="QGridLayout" name="gridLayout_2">
+              <item row="1" column="0">
+               <widget class="QLabel" name="label_5">
+                <property name="text">
+                 <string>Slideshow time left: </string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QSpinBox" name="increment_interval_spinner">
+                <property name="suffix">
+                 <string> image(s)</string>
+                </property>
+                <property name="minimum">
+                 <number>1</number>
+                </property>
+                <property name="maximum">
+                 <number>999999999</number>
+                </property>
+                <property name="value">
+                 <number>5</number>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="0">
+               <widget class="QLabel" name="label_2">
+                <property name="text">
+                 <string>Enter increment interval: </string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0">
+               <widget class="QLabel" name="label_4">
+                <property name="text">
+                 <string>Total amount of images in slideshow:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <widget class="QLabel" name="increment_total_images_label">
+                <property name="text">
+                 <string>0</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QLabel" name="increment_time_left_label">
+                <property name="text">
+                 <string>00:00:00</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QTimeEdit" name="base_speed_timeedit">
+             <property name="frame">
+              <bool>true</bool>
+             </property>
+             <property name="time">
+              <time>
+               <hour>0</hour>
+               <minute>0</minute>
+               <second>30</second>
+              </time>
+             </property>
+             <property name="currentSection">
+              <enum>QDateTimeEdit::MinuteSection</enum>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="tab_2">
+          <attribute name="title">
+           <string>Preset 2</string>
+          </attribute>
+          <layout class="QGridLayout" name="gridLayout_3">
+           <item row="0" column="0">
+            <widget class="QLabel" name="label_6">
+             <property name="text">
+              <string>Total time:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QTimeEdit" name="total_descval_time_edit">
+             <property name="readOnly">
+              <bool>false</bool>
+             </property>
+             <property name="buttonSymbols">
+              <enum>QAbstractSpinBox::UpDownArrows</enum>
+             </property>
+             <property name="specialValueText">
+              <string/>
+             </property>
+             <property name="accelerated">
+              <bool>false</bool>
+             </property>
+             <property name="time">
+              <time>
+               <hour>0</hour>
+               <minute>20</minute>
+               <second>0</second>
+              </time>
+             </property>
+             <property name="currentSection">
+              <enum>QDateTimeEdit::MinuteSection</enum>
+             </property>
+             <property name="displayFormat">
+              <string>H:mm:ss</string>
+             </property>
+             <property name="currentSectionIndex">
+              <number>1</number>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="0">
+            <widget class="QPushButton" name="add_preset_2_table_row">
+             <property name="toolTip">
+              <string>Add row</string>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset resource="icons.qrc">
+               <normaloff>:/Icons/Icons/plus.png</normaloff>:/Icons/Icons/plus.png</iconset>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <widget class="QPushButton" name="remove_preset_2_table_row">
+             <property name="toolTip">
+              <string>Remove row</string>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset resource="icons.qrc">
+               <normaloff>:/Icons/Icons/minus.png</normaloff>:/Icons/Icons/minus.png</iconset>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0" colspan="2">
+            <widget class="TotalTimeTable" name="preset_2_table">
+             <property name="rowCount">
+              <number>3</number>
+             </property>
+             <row/>
+             <row/>
+             <row/>
+             <column>
+              <property name="text">
+               <string>Description</string>
+              </property>
+             </column>
+             <column>
+              <property name="text">
+               <string>Value</string>
+              </property>
+             </column>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="tab_3">
+          <attribute name="title">
+           <string>Preset 3</string>
+          </attribute>
+          <layout class="QGridLayout" name="gridLayout_6">
+           <item row="1" column="0">
+            <widget class="QPushButton" name="add_images_time_table_row">
+             <property name="toolTip">
+              <string>Add row</string>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset resource="icons.qrc">
+               <normaloff>:/Icons/Icons/plus.png</normaloff>:/Icons/Icons/plus.png</iconset>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QPushButton" name="remove_images_time_table_row">
+             <property name="toolTip">
+              <string>Remove row</string>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset resource="icons.qrc">
+               <normaloff>:/Icons/Icons/minus.png</normaloff>:/Icons/Icons/minus.png</iconset>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <widget class="QLabel" name="images_total_time_label">
+             <property name="text">
+              <string>00:00:00</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="0">
+            <widget class="QLabel" name="label_7">
+             <property name="text">
+              <string>Total time:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="0" colspan="2">
+            <widget class="ImagesTimeTable" name="images_time_table">
+             <property name="rowCount">
+              <number>3</number>
+             </property>
+             <row/>
+             <row/>
+             <row/>
+             <column>
+              <property name="text">
+               <string>Number of images</string>
+              </property>
+             </column>
+             <column>
+              <property name="text">
+               <string>Time</string>
+              </property>
+             </column>
+            </widget>
+           </item>
+          </layout>
+         </widget>
         </widget>
        </item>
-       <item row="0" column="1">
-        <widget class="QSpinBox" name="speed_spinner">
-         <property name="frame">
-          <bool>true</bool>
-         </property>
-         <property name="suffix">
-          <string> s</string>
-         </property>
-         <property name="minimum">
-          <number>1</number>
-         </property>
-         <property name="maximum">
-          <number>999999999</number>
-         </property>
-         <property name="singleStep">
-          <number>5</number>
-         </property>
-         <property name="value">
-          <number>30</number>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="0">
-        <widget class="QCheckBox" name="increment_checkbox">
-         <property name="text">
-          <string>Increment slideshow speed?</string>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="0" colspan="2">
-        <widget class="QGroupBox" name="groupBox">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="title">
-          <string>Increment settings</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_2">
-          <item row="1" column="0">
-           <widget class="QLabel" name="label_5">
-            <property name="text">
-             <string>Slideshow time left: </string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QSpinBox" name="increment_interval_spinner">
-            <property name="suffix">
-             <string> image(s)</string>
-            </property>
-            <property name="minimum">
-             <number>1</number>
-            </property>
-            <property name="maximum">
-             <number>999999999</number>
-            </property>
-            <property name="value">
-             <number>5</number>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_2">
-            <property name="text">
-             <string>Enter increment interval: </string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="label_4">
-            <property name="text">
-             <string>Total amount of images in slideshow:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QLabel" name="total_images_label">
-            <property name="text">
-             <string>0</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QLabel" name="slideshow_time_left_label">
-            <property name="text">
-             <string>00:00:00</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-      </layout>
-     </widget>
-     <widget class="QWidget" name="tab_2">
-      <attribute name="title">
-       <string>Preset 2</string>
-      </attribute>
-      <layout class="QGridLayout" name="gridLayout_3">
-       <item row="0" column="0">
-        <widget class="QLabel" name="label_6">
-         <property name="text">
-          <string>Total time:</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="1">
-        <widget class="QTimeEdit" name="total_descval_time_edit">
-         <property name="readOnly">
-          <bool>false</bool>
-         </property>
-         <property name="buttonSymbols">
-          <enum>QAbstractSpinBox::UpDownArrows</enum>
-         </property>
-         <property name="specialValueText">
-          <string/>
-         </property>
-         <property name="accelerated">
-          <bool>false</bool>
-         </property>
-         <property name="time">
-          <time>
-           <hour>0</hour>
-           <minute>20</minute>
-           <second>0</second>
-          </time>
-         </property>
-         <property name="currentSection">
-          <enum>QDateTimeEdit::MinuteSection</enum>
-         </property>
-         <property name="displayFormat">
-          <string>H:mm:ss</string>
-         </property>
-         <property name="currentSectionIndex">
-          <number>1</number>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="0">
-        <widget class="QPushButton" name="add_time_edit_table_row">
-         <property name="toolTip">
-          <string>Add row</string>
-         </property>
-         <property name="text">
-          <string/>
-         </property>
-         <property name="icon">
-          <iconset resource="icons.qrc">
-           <normaloff>:/Icons/Icons/plus.png</normaloff>:/Icons/Icons/plus.png</iconset>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="1">
-        <widget class="QPushButton" name="remove_time_edit_table_row">
-         <property name="toolTip">
-          <string>Remove row</string>
-         </property>
-         <property name="text">
-          <string/>
-         </property>
-         <property name="icon">
-          <iconset resource="icons.qrc">
-           <normaloff>:/Icons/Icons/minus.png</normaloff>:/Icons/Icons/minus.png</iconset>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="0" colspan="2">
-        <widget class="TotalTimeTable" name="preset_2_table">
-         <property name="rowCount">
-          <number>3</number>
-         </property>
-         <row/>
-         <row/>
-         <row/>
-         <column>
-          <property name="text">
-           <string>Description</string>
-          </property>
-         </column>
-         <column>
-          <property name="text">
-           <string>Value</string>
-          </property>
-         </column>
-        </widget>
-       </item>
-      </layout>
-     </widget>
-     <widget class="QWidget" name="tab_3">
-      <attribute name="title">
-       <string>Preset 3</string>
-      </attribute>
-      <layout class="QGridLayout" name="gridLayout_6">
        <item row="1" column="0">
-        <widget class="QPushButton" name="add_value_table_row">
-         <property name="toolTip">
-          <string>Add row</string>
-         </property>
+        <widget class="QLabel" name="label_8">
          <property name="text">
-          <string/>
-         </property>
-         <property name="icon">
-          <iconset resource="icons.qrc">
-           <normaloff>:/Icons/Icons/plus.png</normaloff>:/Icons/Icons/plus.png</iconset>
+          <string>Use preset:</string>
          </property>
         </widget>
        </item>
        <item row="1" column="1">
-        <widget class="QPushButton" name="remove_value_table_row">
+        <widget class="QComboBox" name="preset_selector">
+         <item>
+          <property name="text">
+           <string>1</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>2</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>3</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="label_3">
          <property name="toolTip">
-          <string>Remove row</string>
+          <string>The slideshow will transition for this amount of seconds before going to the next image.</string>
          </property>
          <property name="text">
-          <string/>
-         </property>
-         <property name="icon">
-          <iconset resource="icons.qrc">
-           <normaloff>:/Icons/Icons/minus.png</normaloff>:/Icons/Icons/minus.png</iconset>
+          <string>Image transition speed: </string>
          </property>
         </widget>
        </item>
        <item row="2" column="1">
-        <widget class="QLabel" name="images_total_time_label">
-         <property name="text">
-          <string>00:00:00</string>
+        <widget class="QDoubleSpinBox" name="transition_speed_spinner">
+         <property name="readOnly">
+          <bool>false</bool>
          </property>
-        </widget>
-       </item>
-       <item row="2" column="0">
-        <widget class="QLabel" name="label_7">
-         <property name="text">
-          <string>Total time:</string>
+         <property name="suffix">
+          <string> s</string>
          </property>
-        </widget>
-       </item>
-       <item row="0" column="0" colspan="2">
-        <widget class="ImagesTimeTable" name="images_time_table">
-         <property name="rowCount">
-          <number>3</number>
+         <property name="singleStep">
+          <double>0.500000000000000</double>
          </property>
-         <row/>
-         <row/>
-         <row/>
-         <column>
-          <property name="text">
-           <string>Number of images</string>
-          </property>
-         </column>
-         <column>
-          <property name="text">
-           <string>Time</string>
-          </property>
-         </column>
+         <property name="value">
+          <double>1.000000000000000</double>
+         </property>
         </widget>
        </item>
       </layout>
+     </widget>
+     <widget class="QWidget" name="settings_tab">
+      <attribute name="title">
+       <string>Settings</string>
+      </attribute>
      </widget>
     </widget>
    </item>
@@ -354,19 +394,17 @@
   </customwidget>
  </customwidgets>
  <tabstops>
-  <tabstop>tab_widget</tabstop>
-  <tabstop>transition_speed_spinner</tabstop>
-  <tabstop>add_time_edit_table_row</tabstop>
-  <tabstop>speed_spinner</tabstop>
+  <tabstop>add_preset_2_table_row</tabstop>
+  <tabstop>base_speed_timeedit</tabstop>
   <tabstop>increment_interval_spinner</tabstop>
-  <tabstop>increment_checkbox</tabstop>
+  <tabstop>increment_speed_checkbox</tabstop>
  </tabstops>
  <resources>
   <include location="icons.qrc"/>
  </resources>
  <connections>
   <connection>
-   <sender>increment_checkbox</sender>
+   <sender>increment_speed_checkbox</sender>
    <signal>toggled(bool)</signal>
    <receiver>groupBox</receiver>
    <slot>setEnabled(bool)</slot>
@@ -382,7 +420,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>add_time_edit_table_row</sender>
+   <sender>add_preset_2_table_row</sender>
    <signal>clicked()</signal>
    <receiver>preset_2_table</receiver>
    <slot>insert_row()</slot>
@@ -398,7 +436,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>remove_time_edit_table_row</sender>
+   <sender>remove_preset_2_table_row</sender>
    <signal>clicked()</signal>
    <receiver>preset_2_table</receiver>
    <slot>remove_row()</slot>
@@ -414,7 +452,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>add_value_table_row</sender>
+   <sender>add_images_time_table_row</sender>
    <signal>clicked()</signal>
    <receiver>images_time_table</receiver>
    <slot>insert_row()</slot>
@@ -430,7 +468,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>remove_value_table_row</sender>
+   <sender>remove_images_time_table_row</sender>
    <signal>clicked()</signal>
    <receiver>images_time_table</receiver>
    <slot>remove_row()</slot>

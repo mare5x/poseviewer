@@ -25,7 +25,6 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.image_canvas = ImageCanvas(self)
         self.list_image_viewer = ListImageViewer(parent=self)
         self.action_options = ActionOptions(self)
-        self.slideshow_settings = SlideshowSettings(self)
         self.slideshow = Slideshow(self)
 
         self.gridLayout.addWidget(self.image_canvas)
@@ -66,7 +65,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.actionPrevious.triggered.connect(self.image_path.prev)
         self.actionFullscreen.triggered.connect(self.toggle_fullscreen)  # toggle fullscreen
         self.actionSound.triggered.connect(self.toggle_sound)  # toggle sound
-        self.actionSettings.triggered.connect(self.slideshow_settings.run)  # set slide show speed
+        self.actionSettings.triggered.connect(self.slideshow.slideshow_settings.run)  # set slide show speed
         self.actionTimer.triggered.connect(self.toggle_label_timer)  # toggle timer display
 
         self.time_elapsed_timer.secElapsed.connect(self.update_timerLabel)  # update the timer label every second
