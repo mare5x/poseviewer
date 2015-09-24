@@ -9,14 +9,14 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>440</width>
-    <height>306</height>
+    <width>380</width>
+    <height>270</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
-    <width>440</width>
-    <height>305</height>
+    <width>380</width>
+    <height>270</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -44,11 +44,11 @@
          <property name="currentIndex">
           <number>0</number>
          </property>
-         <widget class="QWidget" name="tab_1">
+         <widget class="QWidget" name="tab_0">
           <attribute name="title">
-           <string>Preset 1</string>
+           <string>General</string>
           </attribute>
-          <layout class="QGridLayout" name="gridLayout_4">
+          <layout class="QGridLayout" name="gridLayout_7">
            <item row="0" column="0">
             <widget class="QLabel" name="label">
              <property name="text">
@@ -56,6 +56,82 @@
              </property>
             </widget>
            </item>
+           <item row="0" column="1">
+            <widget class="QTimeEdit" name="base_speed_timeedit">
+             <property name="frame">
+              <bool>true</bool>
+             </property>
+             <property name="time">
+              <time>
+               <hour>0</hour>
+               <minute>0</minute>
+               <second>30</second>
+              </time>
+             </property>
+             <property name="currentSection">
+              <enum>QDateTimeEdit::MinuteSection</enum>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="label_3">
+             <property name="toolTip">
+              <string>The slideshow will transition for this amount of seconds before going to the next image.</string>
+             </property>
+             <property name="text">
+              <string>Image transition speed: </string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QDoubleSpinBox" name="transition_speed_spinner">
+             <property name="readOnly">
+              <bool>false</bool>
+             </property>
+             <property name="suffix">
+              <string> s</string>
+             </property>
+             <property name="singleStep">
+              <double>0.500000000000000</double>
+             </property>
+             <property name="value">
+              <double>1.000000000000000</double>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="0">
+            <widget class="QLabel" name="label_8">
+             <property name="text">
+              <string>Use preset:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <widget class="QComboBox" name="preset_selector">
+             <item>
+              <property name="text">
+               <string>1</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>2</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>3</string>
+              </property>
+             </item>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="tab_1">
+          <attribute name="title">
+           <string>Preset 1</string>
+          </attribute>
+          <layout class="QGridLayout" name="gridLayout_4">
            <item row="2" column="0">
             <widget class="QCheckBox" name="increment_speed_checkbox">
              <property name="text">
@@ -124,23 +200,6 @@
                </widget>
               </item>
              </layout>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="QTimeEdit" name="base_speed_timeedit">
-             <property name="frame">
-              <bool>true</bool>
-             </property>
-             <property name="time">
-              <time>
-               <hour>0</hour>
-               <minute>0</minute>
-               <second>30</second>
-              </time>
-             </property>
-             <property name="currentSection">
-              <enum>QDateTimeEdit::MinuteSection</enum>
-             </property>
             </widget>
            </item>
           </layout>
@@ -310,58 +369,6 @@
          </widget>
         </widget>
        </item>
-       <item row="1" column="0">
-        <widget class="QLabel" name="label_8">
-         <property name="text">
-          <string>Use preset:</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="1">
-        <widget class="QComboBox" name="preset_selector">
-         <item>
-          <property name="text">
-           <string>1</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>2</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>3</string>
-          </property>
-         </item>
-        </widget>
-       </item>
-       <item row="2" column="0">
-        <widget class="QLabel" name="label_3">
-         <property name="toolTip">
-          <string>The slideshow will transition for this amount of seconds before going to the next image.</string>
-         </property>
-         <property name="text">
-          <string>Image transition speed: </string>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="1">
-        <widget class="QDoubleSpinBox" name="transition_speed_spinner">
-         <property name="readOnly">
-          <bool>false</bool>
-         </property>
-         <property name="suffix">
-          <string> s</string>
-         </property>
-         <property name="singleStep">
-          <double>0.500000000000000</double>
-         </property>
-         <property name="value">
-          <double>1.000000000000000</double>
-         </property>
-        </widget>
-       </item>
       </layout>
      </widget>
      <widget class="QWidget" name="settings_tab">
@@ -395,7 +402,6 @@
  </customwidgets>
  <tabstops>
   <tabstop>add_preset_2_table_row</tabstop>
-  <tabstop>base_speed_timeedit</tabstop>
   <tabstop>increment_interval_spinner</tabstop>
   <tabstop>increment_speed_checkbox</tabstop>
  </tabstops>

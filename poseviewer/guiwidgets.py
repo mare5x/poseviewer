@@ -4,7 +4,7 @@ from PySide.QtGui import *
 import os
 
 from .imageloader import *
-from .slideshowsettings import SlideshowSettings
+from .slideshowsettings import Slideshow
 
 
 SUPPORTED_FORMATS_FILTER = ["*.BMP", "*.GIF", "*.JPG", "*.JPEG", "*.PNG", "*.PBM", "*.PGM", "*.PPM", "*.XBM", "*.XPM"]

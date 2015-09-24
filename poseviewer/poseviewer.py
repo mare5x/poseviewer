@@ -38,7 +38,8 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
         self.slideshow.slideshowComplete.connect(self.toggle_slideshow)
         self.slideshow.slideshowComplete.connect(lambda: self.notification_widget.notify('Slideshow Complete!', duration=0))
-        self.slideshow.incrementIntervalChanged.connect(self.notify_slideshow_change)
+        self.slideshow.slideshowNotifyChange.connect(self.notify_slideshow_change)
+        self.slideshow.slideshowNext.connect(self.next_image)
 
         self.image_path.imageChanged.connect(self.prepare_image)
         self.image_path.sequenceChanged.connect(self.action_options.enable_all_actions)
@@ -65,7 +66,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.actionPrevious.triggered.connect(self.image_path.prev)
         self.actionFullscreen.triggered.connect(self.toggle_fullscreen)  # toggle fullscreen
         self.actionSound.triggered.connect(self.toggle_sound)  # toggle sound
-        self.actionSettings.triggered.connect(self.slideshow.slideshow_settings.run)  # set slide show speed
+        self.actionSettings.triggered.connect(self.slideshow.settings_ui.run)  # set slide show speed
         self.actionTimer.triggered.connect(self.toggle_label_timer)  # toggle timer display
 
         self.time_elapsed_timer.secElapsed.connect(self.update_timerLabel)  # update the timer label every second
@@ -155,19 +156,26 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
         self.update_image()  # update the image to fit the fullscreen mode
 
+    def stop_slideshow(self):
+        self.set_icon(":/Icons/Icons/play.png", self.actionPlay)
+        self.slideshow.stop()
+        self.actionPause.setEnabled(False)
+
+    def start_slideshow(self):
+        self.set_icon(":/Icons/Icons/stop.png", self.actionPlay)
+        self.beep()
+        self.notify_slideshow_change()
+        self.time_elapsed_timer.set_time_to_zero()
+        self.slideshow.start()
+        self.actionPause.setEnabled(True)
+
     def toggle_slideshow(self):
         """Deals with starting/stopping the slideshow.
         """
         if self.slideshow.is_active():  # if it's playing, stop it
-            self.set_icon(":/Icons/Icons/play.png", self.actionPlay)
+            self.stop_slideshow()
         else:  # if it's not playing, play it
-            self.beep()
-            self.set_icon(":/Icons/Icons/stop.png", self.actionPlay)
-            self.notify_slideshow_change()
-            self.time_elapsed_timer.set_time_to_zero()
-
-        self.slideshow.toggle()
-        self.actionPause.setEnabled(self.slideshow.is_active())
+            self.start_slideshow()
 
     def toggle_sound(self):
         """
@@ -204,8 +212,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         pass
 
     def notify_slideshow_change(self):
-        msg = self.slideshow.format_change_message()
-        self.notification_widget.notify(msg)
+        self.notification_widget.notify(self.slideshow.format_notify_message())
 
     @staticmethod
     def beep():
@@ -215,7 +222,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
     def update_timerLabel(self):
         if self.timer_visible:
             if self.slideshow.is_active():
-                self.timerLabel.setText(format_secs(self.slideshow.speed - self.time_elapsed_timer.secs_elapsed))
+                self.timerLabel.setText(format_secs(self.slideshow.speed() - self.time_elapsed_timer.secs_elapsed))
             else:
                 self.timerLabel.setText(self.time_elapsed_timer.get_time_elapsed())
 
