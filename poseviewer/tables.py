@@ -119,11 +119,19 @@ class ImagesTimeTable(BaseTable):
     def calculate_total_time(self):
         total = 0
         for row in range(self.rowCount()):
-            item1, item2 = self.item(row, 0), self.item(row, 1)
-            if item1 and item2:
-                total += item1.data(QtCore.Qt.DisplayRole) * secs_from_qtime(QtCore.QTime.fromString(item2.data(QtCore.Qt.DisplayRole), "hh:mm:ss"))
+            item1, item2 = self.get_row_values(row)
+            total += item1 * item2
 
         return total
 
     def get_total_time_string(self):
         return format_secs(self.calculate_total_time())
+
+    def get_row_values(self, row):
+        item1, item2 = self.item(row, 0), self.item(row, 1)
+        if item1 and item2:
+            return item1.data(QtCore.Qt.DisplayRole), secs_from_qtime(QtCore.QTime.fromString(item2.data(QtCore.Qt.DisplayRole), "hh:mm:ss"))
+        return 0, 0
+
+    def rows(self):
+        return self.rowCount()

@@ -20,17 +20,25 @@ class SlideshowSettings(QDialog, SlideshowSettingsUi):
         return self.transition_speed_spinner.value()
 
     def selected_preset(self):
-        return int(self.preset_selector.currentText())
+        try:
+            return int(self.preset_selector.currentText())
+        except ValueError:
+            return 0
 
     def run(self):
         return self.exec_()
 
 
-class Slideshow(QObject):
+class BaseSlideshow(QObject):
     slideshowComplete = Signal()
     slideshowNotifyChange = Signal()
     slideshowNext = Signal()
 
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+
+class Slideshow(BaseSlideshow):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.settings_ui = SlideshowSettings()
@@ -40,6 +48,8 @@ class Slideshow(QObject):
         self.incremental_slideshow.incrementIntervalChanged.connect(self.slideshowNotifyChange.emit)
         self.incremental_slideshow.slideshowComplete.connect(self.slideshowComplete.emit)
         self.image_time_product_slideshow = ImageTimeProductSlideshow(self.settings_ui)
+        self.image_time_product_slideshow.slideshowComplete.connect(self.slideshowComplete.emit)
+        self.image_time_product_slideshow.slideshowNotifyChange.connect(self.slideshowNotifyChange.emit)
 
         self.slideshow_time_left = 0
         self.slideshow_active = False  # is the slideshow playing
@@ -55,6 +65,10 @@ class Slideshow(QObject):
         else:
             self.timer.start(self.settings_ui.base_speed() * 1000)  # ms to s
 
+    def reset_timer(self):
+        if self.timer.isActive():
+            self.start_timer(self.timer.interval())
+
     def pause(self):
         if self.actionPause.isChecked() and self.slideshow_active:
             self.slideshow_time_left = self.timer.interval() - self.timer_elapsed.elapsed()
@@ -66,41 +80,52 @@ class Slideshow(QObject):
             self.slideshow_active = True
 
     def next(self):
-        if self.settings_ui.selected_preset() == 1:
-            if self.settings_ui.increment_speed_checkbox.isChecked():
-                self.start_timer(self.incremental_slideshow.increment_speed() * 1000)
-            else:
-                self.timer.start()
+        if self.settings_ui.selected_preset() == 0:
+            self.start_timer()
+        elif self.settings_ui.selected_preset() == 1:
+            self.start_timer(self.incremental_slideshow.increment_speed() * 1000)
+        elif self.settings_ui.selected_preset() == 3:
+            next_interval = self.image_time_product_slideshow.next()
+            if next_interval:
+                self.start_timer(next_interval * 1000)
 
-        QTimer.singleShot(0, self.slideshowNext.emit)
+        if self.slideshow_active:
+            QTimer.singleShot(0, self.slideshowNext.emit)
 
     def start(self):
-        if not self.is_active():
-            if self.settings_ui.selected_preset() == 1:
-                self.incremental_slideshow.reset_settings()
-                self.timer_elapsed.start()
-                self.start_timer()
+        if self.settings_ui.selected_preset() == 1:
+            self.incremental_slideshow.reset_settings()
+        elif self.settings_ui.selected_preset() == 3:
+            self.image_time_product_slideshow.reset_settings()
+        self.next()
+        self.timer_elapsed.start()
         self.slideshow_active = True
 
     def stop(self):
-        if self.is_active():
-            self.timer.stop()
+        self.timer.stop()
         self.slideshow_active = False
 
     def is_active(self):
         return self.slideshow_active
 
     def speed(self):
-        if self.settings_ui.selected_preset() == 1:
+        if self.settings_ui.selected_preset() == 0:
+            return self.settings_ui.base_speed()
+        elif self.settings_ui.selected_preset() == 1:
             return self.incremental_slideshow.speed
+        elif self.settings_ui.selected_preset() == 3:
+            return self.image_time_product_slideshow.speed()
 
     def format_notify_message(self):
-        if self.settings_ui.selected_preset() == 1:
+        if self.settings_ui.selected_preset() == 0:
+            return "Turning it up to {}".format(format_secs(self.settings_ui.base_speed()))
+        elif self.settings_ui.selected_preset() == 1:
             return self.incremental_slideshow.format_increment_changed_message()
+        elif self.settings_ui.selected_preset() == 3:
+            return self.image_time_product_slideshow.format_notify_message()
 
 
-class IncrementalSlideshow(QObject):
-    slideshowComplete = Signal()
+class IncrementalSlideshow(BaseSlideshow):
     incrementIntervalChanged = Signal()
 
     def __init__(self, ui):
@@ -167,28 +192,78 @@ class IncrementalSlideshow(QObject):
         return sum([i if i > 0 else 1 for i in range(self.base_increment_speed() + 1)])
 
     def update_slideshow_information_labels(self):
+        self.ui.increment_base_speed_label.setText(self.ui.base_speed_timeedit.time().toString("H:mm:ss"))
         self.ui.increment_time_left_label.setText((format_secs(self.calculate_slideshow_time_left())))
         self.ui.increment_total_images_label.setText(str(self.calculate_total_images()))
 
     def format_increment_changed_message(self):
         msg = "Turning it up to {}".format(format_secs(self.speed))
-        if self.ui.increment_speed_checkbox.isChecked():
-            msg += " for {} images!\nTime left in slideshow: {}".format(1 if self.increment_interval == 0 else
-                    self.increment_interval, format_secs(self.calculate_slideshow_time_left()))
+        msg += " for {} images!\nTime left in slideshow: {}".format(1 if self.increment_interval == 0 else
+                self.increment_interval, format_secs(self.calculate_slideshow_time_left()))
         return msg
 
 
-class ImageTimeProductSlideshow(QObject):
+class ImageTimeProductSlideshow(BaseSlideshow):
     def __init__(self, ui):
         self.ui = ui
         super().__init__(self.ui)
 
-        self.ui.images_time_table.totalTimeChanged.connect(self.update_images_total_time_label)
+        self.table = self.ui.images_time_table
+        self.table.totalTimeChanged.connect(self.update_images_total_time_label)
+
+        self.slideshowComplete.connect(self.reset_settings)
 
         self.update_images_total_time_label()
 
+        self.row_index = 0
+        self.images_counter = 0
+
     def update_images_total_time_label(self):
-        self.ui.images_total_time_label.setText(self.ui.images_time_table.get_total_time_string())
+        self.ui.images_total_time_label.setText(self.table.get_total_time_string())
 
+    def next(self):
+        if self.row_index < self.table.rows():
+            images, secs = self.row_values()
+            if self.images_counter < images:
+                self.images_counter += 1
+                return secs
+            else:
+                self.row_index += 1
+                if self.row_index < self.table.rows():  # if not done
+                    self.slideshowNotifyChange.emit()
+                self.images_counter = 0
+                return self.next()
+        else:
+            self.reset_settings()
+            self.slideshowComplete.emit()
 
-# move slideshow stuff into Slideshow class and have that emit signals for slideshows not slideshowsettings
+    def row_values(self, row=None):
+        if row is None:
+            return self.table.get_row_values(self.row_index)
+        else:
+            return self.table.get_row_values(row)
+
+    def speed(self):
+        return self.row_values()[1]
+
+    def time_left(self):
+        time_used = 0
+        for row in range(self.row_index - 1):
+            images, secs = self.row_values(row)
+            time_used += images * secs
+
+        if self.row_index > 0:
+            current_row_secs = self.row_values(self.row_index)[1]
+            time_used += self.images_counter * current_row_secs
+
+        return self.table.calculate_total_time() - time_used
+
+    def reset_settings(self):
+        self.row_index = 0
+        self.images_counter = 0
+
+    def format_notify_message(self):
+        return "Turning it up to {speed} for {images} images!\nTime left in slideshow: {time_left}".format(
+                speed=format_secs(self.speed()),
+                images=self.row_values()[0],
+                time_left=format_secs(self.time_left()))

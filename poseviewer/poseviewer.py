@@ -14,13 +14,13 @@ from .guiwidgets import *
 
 class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
     WINDOW_TITLE = "Poseviewer"
+    BEEP = QSound(os.path.join(os.path.dirname(os.path.abspath(__file__)), './Sounds/beep.wav'))
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setupUi(self)
 
         self.notification_widget = NotificationPopupWidget(self)
-
         self.image_path = ImagePath(self)
         self.image_canvas = ImageCanvas(self)
         self.list_image_viewer = ListImageViewer(parent=self)
@@ -38,6 +38,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
         self.slideshow.slideshowComplete.connect(self.toggle_slideshow)
         self.slideshow.slideshowComplete.connect(lambda: self.notification_widget.notify('Slideshow Complete!', duration=0))
+        self.slideshow.slideshowComplete.connect(self.beep)
         self.slideshow.slideshowNotifyChange.connect(self.notify_slideshow_change)
         self.slideshow.slideshowNext.connect(self.next_image)
 
@@ -122,6 +123,9 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         Update image with the next image in sequence.
         """
         self.image_path.next()
+
+        if self.slideshow.is_active():
+            self.slideshow.reset_timer()
 
         if self.sound and self.slideshow.is_active():
             self.beep()
@@ -214,10 +218,9 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
     def notify_slideshow_change(self):
         self.notification_widget.notify(self.slideshow.format_notify_message())
 
-    @staticmethod
-    def beep():
-        beep = QSound(os.path.join(os.path.dirname(os.path.abspath(__file__)), './Sounds/beep.wav'))
-        beep.play()
+    def beep(self):
+        if self.sound:
+            self.BEEP.play()
 
     def update_timerLabel(self):
         if self.timer_visible:
