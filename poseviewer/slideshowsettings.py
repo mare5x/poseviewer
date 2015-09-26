@@ -2,7 +2,7 @@ from PySide.QtCore import *
 from PySide.QtGui import *
 
 from .ui.slideshowsettingsui import Ui_Dialog as SlideshowSettingsUi
-from .corewidgets import format_secs, secs_from_qtime
+from .corewidgets import format_secs, secs_from_qtime, Settings
 from .tables import *
 
 
@@ -12,6 +12,9 @@ class SlideshowSettings(QDialog, SlideshowSettingsUi):
         self.setupUi(self)  # SlideshowSettingsUi
 
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)  # removes question mark
+
+        self._settings = Settings()
+        self.load_settings()
 
     def base_speed(self):
         return secs_from_qtime(self.base_speed_timeedit.time())
@@ -27,6 +30,39 @@ class SlideshowSettings(QDialog, SlideshowSettingsUi):
 
     def run(self):
         return self.exec_()
+
+    def load_settings(self):
+        with self._settings.in_group('settings_ui'):
+            self.resize(self._settings.value('size', self.size()))
+            self.move(self._settings.value('pos', self.pos()))
+            self.base_speed_timeedit.setTime(self._settings.value('base_speed', self.base_speed_timeedit.time()))
+            self.transition_speed_spinner.setValue(float(self._settings.value('transition_speed', self.transition_speed_spinner.value())))
+            self.preset_selector.setCurrentIndex(int(self._settings.value('selected_preset', 0)))
+
+            with self._settings.in_group('interval_settings'):
+                self.increment_interval_spinner.setValue(int(self._settings.value('increment_interval', self.increment_interval_spinner.value())))
+
+
+    def write_settings(self):
+        with self._settings.in_group('settings_ui'):
+            general_settings = {
+                'size': self.size(),
+                'pos': self.pos(),
+                'base_speed': self.base_speed_timeedit.time(),
+                'transition_speed': self.transition_speed_spinner.value(),
+                'selected_preset': self.preset_selector.currentIndex()
+            }
+            self._settings.set_values(general_settings)
+
+            with self._settings.in_group('interval_settings'):
+                interval_settings = {
+                    'increment_interval': self.increment_interval_spinner.value()
+                }
+                self._settings.set_values(interval_settings)
+
+    def closeEvent(self, event):
+        self.write_settings()
+        event.accept()
 
 
 class BaseSlideshow(QObject):

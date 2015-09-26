@@ -1,8 +1,9 @@
-﻿from PySide.QtCore import *
+from PySide.QtCore import *
 from PySide.QtGui import *
 import os
 import scandir
 import random
+from contextlib import contextmanager
 from .imageloader import *
 
 
@@ -25,14 +26,29 @@ def secs_from_qtime(qtime):
 
 
 class Settings(QSettings):
-    def __init__(self, *args, parent=None, **kwargs):
-        super().__init__(*args, parent=parent, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(QSettings.IniFormat, QSettings.UserScope, "Mare5", "Poseviewer")
 
     def __getitem__(self, key):
         return self.value(key)
 
     def __setitem__(self, key, value):
         self.setValue(key, value)
+
+    @contextmanager
+    def in_group(self, group):
+        self.beginGroup(group)
+        yield
+        self.endGroup()
+
+    def set_values(self, values, group=''):
+        with self.in_group(group):
+            for key, value in values.items():
+                self.setValue(key, value)
+
+    def get_values(self, *values, group=''):
+        with self.in_group(group):
+            return {key: self.value(key) for key in values}
 
 
 class ImagePath(QObject):

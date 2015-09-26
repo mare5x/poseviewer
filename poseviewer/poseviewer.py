@@ -20,6 +20,8 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         super().__init__(parent)
         self.setupUi(self)
 
+        self.settings = Settings()
+
         self.notification_widget = NotificationPopupWidget(self)
         self.image_path = ImagePath(self)
         self.image_canvas = ImageCanvas(self)
@@ -78,8 +80,8 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
 
         self.toolBar.hide()
 
-        self.dirs = settings.value('dirs', '.')
-        self.starred_images = settings.value('stars', [])
+        self.dirs = self.settings.value('dirs', '.')
+        self.starred_images = self.settings.value('stars', [])
 
         self.action_options.enable_actions_for(self.action_options.path_actions)
 
@@ -96,7 +98,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         dirs = QFileDialog.getExistingDirectory(self, "Open directory", dir=self.dirs)
         if dirs:
             self.dirs = dirs
-        settings['dirs'] = self.dirs
+        self.settings['dirs'] = self.dirs
         if self.dirs:  # '' is not a valid path
             self.image_path.set_sequence(self.dirs)
 
@@ -245,7 +247,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         elif not star:
             self.starred_images.remove(path)
 
-        settings['stars'] = self.starred_images
+        self.settings['stars'] = self.starred_images
         if not self.list_image_viewer.string_list_model.stringList() == self.image_path.sequence:
             self.list_image_viewer.display(self.starred_images, self.image_path.current)
             self.list_image_viewer.toggle_display()
@@ -296,7 +298,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.image_canvas.fit_in_view()
 
     def closeEvent(self, event):
-        settings['stars'] = self.starred_images  # save starred_images
+        self.settings['stars'] = self.starred_images  # save starred_images
         event.accept()  # close app
 
 
@@ -458,9 +460,6 @@ class ActionOptions:
 
 
 def run():
-    global settings
-    settings = Settings(QSettings.IniFormat, QSettings.UserScope, "Mare5", "Poseviewer")
-
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('Mare5.Poseviewer.python.1')
 
     app = QApplication(sys.argv)
