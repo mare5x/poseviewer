@@ -1,5 +1,5 @@
 from PySide import QtCore, QtGui
-from .corewidgets import secs_from_qtime, format_secs
+from .corewidgets import secs_from_qtime, format_secs, Settings
 
 
 class SpinBoxDelegate(QtGui.QStyledItemDelegate):
@@ -102,13 +102,16 @@ class ImagesTimeTable(BaseTable):
         self.setItemDelegateForColumn(0, self.spinbox_delegate)
         self.setItemDelegateForColumn(1, self.timeedit_delegate)
 
-        for row in range(self.rowCount()):
-            self.model().setData(self.model().index(row, 0), 5)
-            self.model().setData(self.model().index(row, 1), "00:01:00")
+        # for row in range(self.rowCount()):
+        #     self.model().setData(self.model().index(row, 0), 5)
+        #     self.model().setData(self.model().index(row, 1), "00:01:00")
 
         self.cellChanged.connect(lambda: self.totalTimeChanged.emit())
         self._model = self.model()
         self._model.rowsRemoved.connect(lambda: self.totalTimeChanged.emit())
+
+        self._settings = Settings()
+        self.load_settings()
 
     def insert_row(self):
         """Override BaseTable method."""
@@ -135,3 +138,21 @@ class ImagesTimeTable(BaseTable):
 
     def rows(self):
         return self.rowCount()
+
+    def load_settings(self):
+        with self._settings.in_group('settings_ui'):
+            with self._settings.in_group('images_time_table'):
+                for row in range(int(self._settings.value('rows', self.rowCount()))):
+                    image, time = self._settings.value(str(row), (5, "00:01:00"))
+                    self.model().setData(self.model().index(row, 0), int(image))
+                    self.model().setData(self.model().index(row, 1), time)
+
+    def write_settings(self):
+        with self._settings.in_group('settings_ui'):
+            with self._settings.in_group('images_time_table'):
+                settings = {'rows': self.rowCount()}
+                for row in range(self.rowCount()):
+                    settings[str(row)] = self.item(row, 0).data(QtCore.Qt.DisplayRole), \
+                                         self.item(row, 1).data(QtCore.Qt.DisplayRole)
+                self._settings.set_values(settings)
+

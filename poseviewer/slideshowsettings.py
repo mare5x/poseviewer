@@ -62,6 +62,7 @@ class SlideshowSettings(QDialog, SlideshowSettingsUi):
 
     def closeEvent(self, event):
         self.write_settings()
+        self.images_time_table.write_settings()
         event.accept()
 
 
