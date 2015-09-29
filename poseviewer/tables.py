@@ -48,20 +48,11 @@ class TimeEditDelegate(QtGui.QStyledItemDelegate):
 class BaseTable(QtGui.QTableWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setupUi()
 
+        self.horizontalHeader().setResizeMode(QtGui.QHeaderView.Stretch)
         self.verticalHeader().show()
         self.horizontalHeader().show()
         self.resizeColumnsToContents()
-
-    def setupUi(self):
-        self.setRowCount(3)
-        self.setColumnCount(2)
-        self.setHorizontalHeaderItem(0, QtGui.QTableWidgetItem())
-        self.horizontalHeaderItem(0).setText("Description")
-        self.setHorizontalHeaderItem(1, QtGui.QTableWidgetItem())
-        self.horizontalHeaderItem(1).setText("Value")
-        self.horizontalHeader().setResizeMode(QtGui.QHeaderView.Stretch)
 
     def insert_row(self, row=None):
         row = row if row else self.currentRow() + 1
@@ -74,7 +65,7 @@ class BaseTable(QtGui.QTableWidget):
         return self.removeRow(self.currentRow())
 
 
-class TotalTimeTable(BaseTable):
+class RandomTimeTable(BaseTable):
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -87,8 +78,7 @@ class TotalTimeTable(BaseTable):
 
     def insert_row(self):
         row = super().insert_row()
-        index = self.model().index(row, 1)
-        self.model().setData(index, "00:00:30")
+        self.model().setData(self.model().index(row, 1), "00:00:30")
 
 
 class ImagesTimeTable(BaseTable):
@@ -102,22 +92,17 @@ class ImagesTimeTable(BaseTable):
         self.setItemDelegateForColumn(0, self.spinbox_delegate)
         self.setItemDelegateForColumn(1, self.timeedit_delegate)
 
-        # for row in range(self.rowCount()):
-        #     self.model().setData(self.model().index(row, 0), 5)
-        #     self.model().setData(self.model().index(row, 1), "00:01:00")
-
         self.cellChanged.connect(lambda: self.totalTimeChanged.emit())
         self._model = self.model()
         self._model.rowsRemoved.connect(lambda: self.totalTimeChanged.emit())
 
-        self._settings = Settings()
-        self.load_settings()
+        QtCore.QTimer.singleShot(0, self.load_settings)
 
-    def insert_row(self):
+    def insert_row(self, row=None, image=5, time="00:01:00"):
         """Override BaseTable method."""
-        row = super().insert_row()
-        self.model().setData(self.model().index(row, 0), 5)
-        self.model().setData(self.model().index(row, 1), "00:01:00")
+        row = super().insert_row(row=row)
+        self.model().setData(self.model().index(row, 0), image)
+        self.model().setData(self.model().index(row, 1), time)
 
     def calculate_total_time(self):
         total = 0
@@ -140,19 +125,30 @@ class ImagesTimeTable(BaseTable):
         return self.rowCount()
 
     def load_settings(self):
-        with self._settings.in_group('settings_ui'):
-            with self._settings.in_group('images_time_table'):
-                for row in range(int(self._settings.value('rows', self.rowCount()))):
-                    image, time = self._settings.value(str(row), (5, "00:01:00"))
+        _settings = Settings()
+        with _settings.in_group('settings_ui'):
+            with _settings.in_group('images_time_table'):
+                rows = int(_settings.value('rows', self.rowCount()))
+                self.setRowCount(rows)
+                for row in range(rows):
+                    image, time = _settings.value(str(row), (5, "00:01:00"))
+                    # self.insert_row(row=row, image=int(image), time=time)
                     self.model().setData(self.model().index(row, 0), int(image))
                     self.model().setData(self.model().index(row, 1), time)
 
     def write_settings(self):
-        with self._settings.in_group('settings_ui'):
-            with self._settings.in_group('images_time_table'):
+        _settings = Settings()
+        with _settings.in_group('settings_ui'):
+            with _settings.in_group('images_time_table'):
                 settings = {'rows': self.rowCount()}
+                print('Writing rows: ', self.rowCount())
                 for row in range(self.rowCount()):
                     settings[str(row)] = self.item(row, 0).data(QtCore.Qt.DisplayRole), \
                                          self.item(row, 1).data(QtCore.Qt.DisplayRole)
-                self._settings.set_values(settings)
+                _settings.set_values(settings)
+
+                max_extra_rows = max([int(key) for key in _settings.childKeys() if key != 'rows']) + 1
+                if max_extra_rows > self.rowCount():
+                    for extra_row in range(self.rowCount(), max_extra_rows):
+                        _settings.remove(str(extra_row))
 

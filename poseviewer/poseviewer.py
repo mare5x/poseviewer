@@ -89,7 +89,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         self.DEFAULT_PALETTE = self.palette()
 
         self.centralWidget().layout().setContentsMargins(0, 0, 0, 0)
-        qApp.installEventFilter(self)
+        QApplication.instance().installEventFilter(self)
 
     def get_directory(self):
         """

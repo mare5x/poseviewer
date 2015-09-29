@@ -212,15 +212,8 @@
            <string>Preset 2</string>
           </attribute>
           <layout class="QGridLayout" name="gridLayout_3">
-           <item row="0" column="0">
-            <widget class="QLabel" name="label_6">
-             <property name="text">
-              <string>Total time:</string>
-             </property>
-            </widget>
-           </item>
            <item row="0" column="1">
-            <widget class="QTimeEdit" name="total_descval_time_edit">
+            <widget class="QTimeEdit" name="total_random_time_edit">
              <property name="readOnly">
               <bool>false</bool>
              </property>
@@ -265,6 +258,13 @@
              </property>
             </widget>
            </item>
+           <item row="0" column="0">
+            <widget class="QLabel" name="label_6">
+             <property name="text">
+              <string>Total time:</string>
+             </property>
+            </widget>
+           </item>
            <item row="2" column="1">
             <widget class="QPushButton" name="remove_preset_2_table_row">
              <property name="toolTip">
@@ -280,18 +280,14 @@
             </widget>
            </item>
            <item row="1" column="0" colspan="2">
-            <widget class="TotalTimeTable" name="preset_2_table">
+            <widget class="RandomTimeTable" name="random_time_table">
+             <property name="toolTip">
+              <string>Randomly picks inserted values for a duration of total time.</string>
+             </property>
              <property name="rowCount">
-              <number>3</number>
+              <number>1</number>
              </property>
              <row/>
-             <row/>
-             <row/>
-             <column>
-              <property name="text">
-               <string>Description</string>
-              </property>
-             </column>
              <column>
               <property name="text">
                <string>Value</string>
@@ -385,7 +381,7 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>TotalTimeTable</class>
+   <class>ImagesTimeTable</class>
    <extends>QTableWidget</extends>
    <header>..tables</header>
    <slots>
@@ -394,13 +390,9 @@
    </slots>
   </customwidget>
   <customwidget>
-   <class>ImagesTimeTable</class>
+   <class>RandomTimeTable</class>
    <extends>QTableWidget</extends>
    <header>..tables</header>
-   <slots>
-    <slot>insert_row()</slot>
-    <slot>remove_row()</slot>
-   </slots>
   </customwidget>
  </customwidgets>
  <tabstops>
@@ -413,32 +405,32 @@
   <connection>
    <sender>add_preset_2_table_row</sender>
    <signal>clicked()</signal>
-   <receiver>preset_2_table</receiver>
+   <receiver>random_time_table</receiver>
    <slot>insert_row()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>62</x>
-     <y>76</y>
+     <x>69</x>
+     <y>240</y>
     </hint>
     <hint type="destinationlabel">
-     <x>97</x>
-     <y>70</y>
+     <x>104</x>
+     <y>137</y>
     </hint>
    </hints>
   </connection>
   <connection>
    <sender>remove_preset_2_table_row</sender>
    <signal>clicked()</signal>
-   <receiver>preset_2_table</receiver>
+   <receiver>random_time_table</receiver>
    <slot>remove_row()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>106</x>
-     <y>76</y>
+     <x>235</x>
+     <y>240</y>
     </hint>
     <hint type="destinationlabel">
-     <x>106</x>
-     <y>70</y>
+     <x>113</x>
+     <y>137</y>
     </hint>
    </hints>
   </connection>
@@ -449,12 +441,12 @@
    <slot>insert_row()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>62</x>
-     <y>70</y>
+     <x>69</x>
+     <y>221</y>
     </hint>
     <hint type="destinationlabel">
-     <x>80</x>
-     <y>64</y>
+     <x>87</x>
+     <y>111</y>
     </hint>
    </hints>
   </connection>
@@ -465,12 +457,12 @@
    <slot>remove_row()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>106</x>
-     <y>70</y>
+     <x>235</x>
+     <y>221</y>
     </hint>
     <hint type="destinationlabel">
-     <x>106</x>
-     <y>64</y>
+     <x>113</x>
+     <y>111</y>
     </hint>
    </hints>
   </connection>
