@@ -66,22 +66,49 @@ class BaseTable(QtGui.QTableWidget):
 
 
 class RandomTimeTable(BaseTable):
+    DEFAULT_TIME = "00:00:30"
+
     def __init__(self, parent=None):
         super().__init__(parent)
 
         self.delegate = TimeEditDelegate()
-        self.setItemDelegateForColumn(1, self.delegate)
+        self.setItemDelegateForColumn(0, self.delegate)
 
-        for row in range(self.rowCount()):
-            index = self.model().index(row, 1)
-            self.model().setData(index, "00:00:30")
+        QtCore.QTimer.singleShot(0, self.load_settings)
 
     def insert_row(self):
         row = super().insert_row()
-        self.model().setData(self.model().index(row, 1), "00:00:30")
+        self.model().setData(self.model().index(row, 0), self.DEFAULT_TIME)
+
+    def load_settings(self):
+        settings = Settings()
+        with settings.in_group('settings_ui'):
+            with settings.in_group('random_time_table'):
+                rows = int(settings.value('rows', self.rowCount()))
+                self.setRowCount(rows)
+                for row in range(rows):
+                    time = settings.value(str(row), self.DEFAULT_TIME)
+                    self.model().setData(self.model().index(row, 0), time)
+
+    def write_settings(self):
+        settings = Settings()
+        with settings.in_group('settings_ui'):
+            with settings.in_group('random_time_table'):
+                section_settings = {'rows': self.rowCount()}
+                for row in range(self.rowCount()):
+                    section_settings[str(row)] = self.item(row, 0).data(QtCore.Qt.DisplayRole)
+                settings.set_values(section_settings)
+
+                max_extra_rows = max([int(key) for key in settings.childKeys() if key != 'rows']) + 1
+                if max_extra_rows > section_settings['rows']:
+                    for extra_row in range(section_settings['rows'], max_extra_rows):
+                        settings.remove(str(extra_row))
 
 
 class ImagesTimeTable(BaseTable):
+    DEFAULT_TIME = "00:01:00"
+    DEFAULT_IMAGE = 5
+
     totalTimeChanged = QtCore.Signal()
 
     def __init__(self, parent=None):
@@ -125,30 +152,29 @@ class ImagesTimeTable(BaseTable):
         return self.rowCount()
 
     def load_settings(self):
-        _settings = Settings()
-        with _settings.in_group('settings_ui'):
-            with _settings.in_group('images_time_table'):
-                rows = int(_settings.value('rows', self.rowCount()))
+        settings = Settings()
+        with settings.in_group('settings_ui'):
+            with settings.in_group('images_time_table'):
+                rows = int(settings.value('rows', self.rowCount()))
                 self.setRowCount(rows)
                 for row in range(rows):
-                    image, time = _settings.value(str(row), (5, "00:01:00"))
+                    image, time = settings.value(str(row), (self.DEFAULT_IMAGE, self.DEFAULT_TIME))
                     # self.insert_row(row=row, image=int(image), time=time)
                     self.model().setData(self.model().index(row, 0), int(image))
                     self.model().setData(self.model().index(row, 1), time)
 
     def write_settings(self):
-        _settings = Settings()
-        with _settings.in_group('settings_ui'):
-            with _settings.in_group('images_time_table'):
-                settings = {'rows': self.rowCount()}
-                print('Writing rows: ', self.rowCount())
-                for row in range(self.rowCount()):
-                    settings[str(row)] = self.item(row, 0).data(QtCore.Qt.DisplayRole), \
-                                         self.item(row, 1).data(QtCore.Qt.DisplayRole)
-                _settings.set_values(settings)
+        settings = Settings()
+        with settings.in_group('settings_ui'):
+            with settings.in_group('images_time_table'):
+                section_settings = {'rows': self.rowCount()}
+                for row in range(section_settings['rows']):
+                    section_settings[str(row)] = self.item(row, 0).data(QtCore.Qt.DisplayRole), \
+                                                 self.item(row, 1).data(QtCore.Qt.DisplayRole)
+                settings.set_values(section_settings)
 
-                max_extra_rows = max([int(key) for key in _settings.childKeys() if key != 'rows']) + 1
-                if max_extra_rows > self.rowCount():
-                    for extra_row in range(self.rowCount(), max_extra_rows):
-                        _settings.remove(str(extra_row))
+                max_extra_rows = max([int(key) for key in settings.childKeys() if key != 'rows']) + 1
+                if max_extra_rows > section_settings['rows']:
+                    for extra_row in range(section_settings['rows'], max_extra_rows):
+                        settings.remove(str(extra_row))
 

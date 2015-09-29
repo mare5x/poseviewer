@@ -13,7 +13,6 @@ class SlideshowSettings(QDialog, SlideshowSettingsUi):
 
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)  # removes question mark
 
-        self._settings = Settings()
         self.load_settings()
 
     def base_speed(self):
@@ -32,37 +31,42 @@ class SlideshowSettings(QDialog, SlideshowSettingsUi):
         return self.exec_()
 
     def load_settings(self):
-        with self._settings.in_group('settings_ui'):
-            self.resize(self._settings.value('size', self.size()))
-            self.move(self._settings.value('pos', self.pos()))
-            self.base_speed_timeedit.setTime(self._settings.value('base_speed', self.base_speed_timeedit.time()))
-            self.transition_speed_spinner.setValue(float(self._settings.value('transition_speed', self.transition_speed_spinner.value())))
-            self.preset_selector.setCurrentIndex(int(self._settings.value('selected_preset', 0)))
+        _settings = Settings()
+        with _settings.in_group('settings_ui'):
+            self.resize(_settings.value('size', self.size()))
+            self.move(_settings.value('pos', self.pos()))
+            self.base_speed_timeedit.setTime(_settings.value('base_speed', self.base_speed_timeedit.time()))
+            self.transition_speed_spinner.setValue(float(_settings.value('transition_speed', self.transition_speed_spinner.value())))
+            self.preset_selector.setCurrentIndex(int(_settings.value('selected_preset', 0)))
+            self.total_random_time_edit.setTime(_settings.value('total_random_time_edit', self.total_random_time_edit.time()))
 
-            with self._settings.in_group('interval_settings'):
-                self.increment_interval_spinner.setValue(int(self._settings.value('increment_interval', self.increment_interval_spinner.value())))
+            with _settings.in_group('interval_settings'):
+                self.increment_interval_spinner.setValue(int(_settings.value('increment_interval', self.increment_interval_spinner.value())))
 
 
     def write_settings(self):
-        with self._settings.in_group('settings_ui'):
+        _settings = Settings()
+        with _settings.in_group('settings_ui'):
             general_settings = {
                 'size': self.size(),
                 'pos': self.pos(),
                 'base_speed': self.base_speed_timeedit.time(),
                 'transition_speed': self.transition_speed_spinner.value(),
-                'selected_preset': self.preset_selector.currentIndex()
+                'selected_preset': self.preset_selector.currentIndex(),
+                'total_random_time_edit': self.total_random_time_edit.time()
             }
-            self._settings.set_values(general_settings)
+            _settings.set_values(general_settings)
 
-            with self._settings.in_group('interval_settings'):
+            with _settings.in_group('interval_settings'):
                 interval_settings = {
                     'increment_interval': self.increment_interval_spinner.value()
                 }
-                self._settings.set_values(interval_settings)
+                _settings.set_values(interval_settings)
 
     def closeEvent(self, event):
         self.write_settings()
         self.images_time_table.write_settings()
+        self.random_time_table.write_settings()
         event.accept()
 
 
