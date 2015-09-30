@@ -7,6 +7,10 @@ from contextlib import contextmanager
 from .imageloader import *
 
 
+def signal_emitter(signal, *args, **kwargs):
+    QTimer.singleShot(0, lambda: signal.emit(*args, **kwargs))
+
+
 def format_secs(secs, pretty=True):
     """
     Calculate hours, minutes, seconds from seconds.

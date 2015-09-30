@@ -64,6 +64,17 @@ class BaseTable(QtGui.QTableWidget):
             return self.removeRow(row)
         return self.removeRow(self.currentRow())
 
+    def rows(self):
+        return self.rowCount()
+
+    def row_item_data(self, row):
+        items = []
+        for column in range(self.columnCount()):
+            item = self.item(row, column)
+            if item:
+                items.append(item)
+        return [item.data(QtCore.Qt.DisplayRole) for item in items]
+
 
 class RandomTimeTable(BaseTable):
     DEFAULT_TIME = "00:00:30"
@@ -75,6 +86,12 @@ class RandomTimeTable(BaseTable):
         self.setItemDelegateForColumn(0, self.delegate)
 
         QtCore.QTimer.singleShot(0, self.load_settings)
+
+    def time(self, row):
+        item = self.item(row, 0)
+        if item:
+            return secs_from_qtime(QtCore.QTime.fromString(self.item(row, 0).data(QtCore.Qt.DisplayRole), "hh:mm:ss"))
+        return 0
 
     def insert_row(self):
         row = super().insert_row()
@@ -147,9 +164,6 @@ class ImagesTimeTable(BaseTable):
         if item1 and item2:
             return item1.data(QtCore.Qt.DisplayRole), secs_from_qtime(QtCore.QTime.fromString(item2.data(QtCore.Qt.DisplayRole), "hh:mm:ss"))
         return 0, 0
-
-    def rows(self):
-        return self.rowCount()
 
     def load_settings(self):
         settings = Settings()

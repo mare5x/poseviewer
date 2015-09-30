@@ -1,8 +1,10 @@
 from PySide.QtCore import *
 from PySide.QtGui import *
 
+import random
+
 from .ui.slideshowsettingsui import Ui_Dialog as SlideshowSettingsUi
-from .corewidgets import format_secs, secs_from_qtime, Settings
+from .corewidgets import format_secs, secs_from_qtime, signal_emitter, Settings
 from .tables import *
 
 
@@ -91,6 +93,9 @@ class Slideshow(BaseSlideshow):
         self.image_time_product_slideshow = ImageTimeProductSlideshow(self.settings_ui)
         self.image_time_product_slideshow.slideshowComplete.connect(self.slideshowComplete.emit)
         self.image_time_product_slideshow.slideshowNotifyChange.connect(self.slideshowNotifyChange.emit)
+        self.random_time_slideshow = RandomTimeSlideshow(self.settings_ui)
+        self.random_time_slideshow.slideshowComplete.connect(self.slideshowComplete.emit)
+        self.random_time_slideshow.slideshowNotifyChange.connect(self.slideshowNotifyChange.emit)
 
         self.slideshow_time_left = 0
         self.slideshow_active = False  # is the slideshow playing
@@ -124,11 +129,14 @@ class Slideshow(BaseSlideshow):
         if self.settings_ui.selected_preset() == 0:
             self.start_timer()
         elif self.settings_ui.selected_preset() == 1:
-            self.start_timer(self.incremental_slideshow.increment_speed() * 1000)
+            next_interval = self.incremental_slideshow.increment_speed()
+        elif self.settings_ui.selected_preset() == 2:
+            next_interval = self.random_time_slideshow.next()
         elif self.settings_ui.selected_preset() == 3:
             next_interval = self.image_time_product_slideshow.next()
-            if next_interval:
-                self.start_timer(next_interval * 1000)
+
+        if next_interval:
+            self.start_timer(next_interval * 1000)
 
         if self.slideshow_active:
             QTimer.singleShot(0, self.slideshowNext.emit)
@@ -136,6 +144,8 @@ class Slideshow(BaseSlideshow):
     def start(self):
         if self.settings_ui.selected_preset() == 1:
             self.incremental_slideshow.reset_settings()
+        elif self.settings_ui.selected_preset() == 2:
+            self.random_time_slideshow.reset_settings()
         elif self.settings_ui.selected_preset() == 3:
             self.image_time_product_slideshow.reset_settings()
         self.next()
@@ -154,6 +164,8 @@ class Slideshow(BaseSlideshow):
             return self.settings_ui.base_speed()
         elif self.settings_ui.selected_preset() == 1:
             return self.incremental_slideshow.speed
+        elif self.settings_ui.selected_preset() == 2:
+            return self.random_time_slideshow.speed()
         elif self.settings_ui.selected_preset() == 3:
             return self.image_time_product_slideshow.speed()
 
@@ -162,6 +174,8 @@ class Slideshow(BaseSlideshow):
             return "Turning it up to {}".format(format_secs(self.settings_ui.base_speed()))
         elif self.settings_ui.selected_preset() == 1:
             return self.incremental_slideshow.format_increment_changed_message()
+        elif self.settings_ui.selected_preset() == 2:
+            return self.random_time_slideshow.format_notify_message()
         elif self.settings_ui.selected_preset() == 3:
             return self.image_time_product_slideshow.format_notify_message()
 
@@ -307,4 +321,50 @@ class ImageTimeProductSlideshow(BaseSlideshow):
         return "Turning it up to {speed} for {images} images!\nTime left in slideshow: {time_left}".format(
                 speed=format_secs(self.speed()),
                 images=self.row_values()[0],
+                time_left=format_secs(self.time_left()))
+
+
+class RandomTimeSlideshow(BaseSlideshow):
+    def __init__(self, settings_ui):
+        super().__init__(settings_ui)
+
+        self.ui = settings_ui
+        self.table = settings_ui.random_time_table
+
+        self._speed = 0
+        self.time_elapsed = 0
+
+    def reset_settings(self):
+        self._speed = 0
+        self.time_elapsed = 0
+
+    def total_time(self):
+        return secs_from_qtime(self.ui.total_random_time_edit.time())
+
+    def time_left(self):
+        time_left = self.total_time() - self.time_elapsed
+        if time_left <= 0:
+            return 0
+        return time_left
+
+    def next(self):
+        random_row = random.randint(0, self.table.rows() - 1)
+        self._speed = self.table.time(random_row)
+
+        if self.time_elapsed >= self.total_time():
+            self.slideshowComplete.emit()
+            return
+        elif self._speed + self.time_elapsed >= self.total_time():
+            self._speed = self.total_time() - self.time_elapsed
+
+        self.time_elapsed += self._speed
+        signal_emitter(self.slideshowNotifyChange)
+        return self._speed
+
+    def speed(self):
+        return self._speed
+
+    def format_notify_message(self):
+        return "Turning it up to {speed}!\n Time left in slideshow: {time_left}".format(
+                speed=format_secs(self.speed()),
                 time_left=format_secs(self.time_left()))
