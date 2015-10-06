@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'ui\poseviewerMainGui.ui'
+# Form implementation generated from reading ui file 'poseviewer\ui\poseviewerMainGui.ui'
 #
-# Created: Fri Aug 14 18:58:37 2015
+# Created: Thu Oct  1 18:43:14 2015
 #      by: pyside-uic 0.2.15 running on PySide 1.2.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -90,6 +90,13 @@ class Ui_MainWindow(object):
         icon10.addPixmap(QtGui.QPixmap(":/Icons/Icons/pause.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionPause.setIcon(icon10)
         self.actionPause.setObjectName("actionPause")
+        self.actionStar = QtGui.QAction(MainWindow)
+        self.actionStar.setCheckable(False)
+        self.actionStar.setEnabled(False)
+        icon11 = QtGui.QIcon()
+        icon11.addPixmap(QtGui.QPixmap(":/Icons/Icons/emptystar.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionStar.setIcon(icon11)
+        self.actionStar.setObjectName("actionStar")
         self.toolBar.addAction(self.actionSettings)
         self.toolBar.addAction(self.actionOpen)
         self.toolBar.addAction(self.actionFullscreen)
@@ -101,6 +108,7 @@ class Ui_MainWindow(object):
         self.toolBar.addSeparator()
         self.toolBar.addAction(self.actionRandom)
         self.toolBar.addAction(self.actionSound)
+        self.toolBar.addAction(self.actionStar)
         self.toolBar.addAction(self.actionTimer)
         self.toolBar.addSeparator()
 
@@ -138,5 +146,8 @@ class Ui_MainWindow(object):
         self.actionPause.setText(QtGui.QApplication.translate("MainWindow", "Pause slideshow", None, QtGui.QApplication.UnicodeUTF8))
         self.actionPause.setToolTip(QtGui.QApplication.translate("MainWindow", "Pause slideshow", None, QtGui.QApplication.UnicodeUTF8))
         self.actionPause.setShortcut(QtGui.QApplication.translate("MainWindow", "P", None, QtGui.QApplication.UnicodeUTF8))
+        self.actionStar.setText(QtGui.QApplication.translate("MainWindow", "Star", None, QtGui.QApplication.UnicodeUTF8))
+        self.actionStar.setToolTip(QtGui.QApplication.translate("MainWindow", "(Un)Star this image.", None, QtGui.QApplication.UnicodeUTF8))
+        self.actionStar.setShortcut(QtGui.QApplication.translate("MainWindow", "Ctrl+D", None, QtGui.QApplication.UnicodeUTF8))
 
 from . import icons_rc

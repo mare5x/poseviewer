@@ -16,7 +16,6 @@ if __name__ == '__main__':
 
 # TODO perfect pause
 # TODO when showing listimageviewer select current
-# DONE TODO dont lose focus when showing notification
 # TODO notification reminders
 # TODO skip image in slideshow
 
@@ -25,6 +24,10 @@ if __name__ == '__main__':
 # at the end of zoom rescale image to fit with the best resolution ...
 # copy imagus
 
-# added to starred notification
+# !!! added to starred notification
+# star button on bar
 
-#
+# MAKE PROPER MODEL FOR LISTIMAGEVIEWER!!!!
+
+
+# add total number of images to preset 3

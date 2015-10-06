@@ -56,6 +56,7 @@
    <addaction name="separator"/>
    <addaction name="actionRandom"/>
    <addaction name="actionSound"/>
+   <addaction name="actionStar"/>
    <addaction name="actionTimer"/>
    <addaction name="separator"/>
   </widget>
@@ -233,6 +234,27 @@
    </property>
    <property name="shortcut">
     <string>P</string>
+   </property>
+  </action>
+  <action name="actionStar">
+   <property name="checkable">
+    <bool>false</bool>
+   </property>
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="icons.qrc">
+     <normaloff>:/Icons/Icons/emptystar.png</normaloff>:/Icons/Icons/emptystar.png</iconset>
+   </property>
+   <property name="text">
+    <string>Star</string>
+   </property>
+   <property name="toolTip">
+    <string>(Un)Star this image.</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+D</string>
    </property>
   </action>
  </widget>

@@ -7,6 +7,15 @@ from contextlib import contextmanager
 from .imageloader import *
 
 
+ICON_ROOT = ":/Icons/Icons/{}"
+
+
+def set_icon(icon_path, target):
+    icon = QIcon()
+    icon.addPixmap(QPixmap(ICON_ROOT.format(icon_path)), QIcon.Normal, QIcon.Off)
+    target.setIcon(icon)
+
+
 def signal_emitter(signal, *args, **kwargs):
     QTimer.singleShot(0, lambda: signal.emit(*args, **kwargs))
 
@@ -204,3 +213,47 @@ class TimeElapsedTimer(QObject):
 
     def set_time_to_zero(self):
         self.secs_elapsed = 0
+
+
+class StarActions(QObject):
+    itemStarChanged = Signal()
+
+    def __init__(self, qwidget):
+        super().__init__(qwidget)
+        self.qwidget = qwidget
+
+    def starred_images(self):
+        settings = Settings()
+        return settings.value('stars', [])
+
+    def star_image(self, path):
+        settings = Settings()
+
+        starred_images = self.starred_images()
+        if path not in starred_images:
+            starred_images.append(path)
+        else:
+            starred_images.remove(path)
+
+        QTimer.singleShot(0, lambda: self.handle_star_icon(path))
+
+        settings['stars'] = starred_images
+
+        signal_emitter(self.itemStarChanged)
+
+    def handle_star_icon(self, path):
+        if path in self.starred_images():
+            set_icon("fullstar.png", self.qwidget)
+        else:
+            set_icon("emptystar.png", self.qwidget)
+
+
+class StarButton(QPushButton, StarActions):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.qwidget = self
+
+        set_icon("emptystar", self)
+        self.setShortcut(QKeySequence("Ctrl+D"))
+        # self.setEnabled(False)
+        self.setToolTip("(Un)Star this image.")

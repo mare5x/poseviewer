@@ -5,6 +5,7 @@ import os
 
 from .imageloader import *
 from .slideshowsettings import Slideshow
+from .corewidgets import StarButton
 
 
 SUPPORTED_FORMATS_FILTER = ["*.BMP", "*.GIF", "*.JPG", "*.JPEG", "*.PNG", "*.PBM", "*.PGM", "*.PPM", "*.XBM", "*.XPM"]
@@ -131,7 +132,7 @@ class ImageCanvas(QGraphicsView):
 class ListImageViewer(QSplitter):
     indexDoubleClicked = Signal(str)
     listImageViewerToggled = Signal()
-    starImage = Signal(str, bool)
+    starChange = Signal(str)
     setDefaultSequence = Signal(list)
 
     def __init__(self, parent=None, path=None):
@@ -151,17 +152,24 @@ class ListImageViewer(QSplitter):
 
         self.canvas = ImageCanvas(self)
 
-        self.star_image_button = QPushButton("Star image")
-        self.unstar_image_button = QPushButton("Unstar image")
+        self.star_button = StarButton(self)
+        # self.star_image_button = QPushButton("Star image")
+        # self.star_image_button.addAction(self.actionStar)
+        # self.unstar_image_button = QPushButton("Unstar image")
         self.set_default_sequence = QPushButton("Load selected")
 
         self.button_box = QDialogButtonBox(Qt.Vertical, self, centerButtons=True)
-        self.button_box.addButton(self.star_image_button, QDialogButtonBox.ActionRole)
-        self.button_box.addButton(self.unstar_image_button, QDialogButtonBox.ActionRole)
+        # self.button_box.addButton(self.star_image_button, QDialogButtonBox.ActionRole)
+        # self.button_box.addButton(self.unstar_image_button, QDialogButtonBox.ActionRole)
+        # self.button_box.addAction(self.actionStar)
+        self.button_box.addButton(self.star_button, QDialogButtonBox.ActionRole)
         self.button_box.addButton(self.set_default_sequence, QDialogButtonBox.ActionRole)
 
-        self.star_image_button.clicked.connect(lambda: self.starImage.emit(self.canvas.image_path, True))
-        self.unstar_image_button.clicked.connect(lambda: self.starImage.emit(self.canvas.image_path, False))
+        # self.star_image_button.clicked.connect(lambda: self.starChange.emit(self.canvas.image_path))
+        # self.unstar_image_button.clicked.connect(lambda: self.starChange.emit(self.canvas.image_path))
+        self.star_button.clicked.connect(lambda: self.handle_star(self.canvas.image_path))
+        self.star_button.clicked.connect(lambda: self.starChange.emit(self.canvas.image_path))
+        # self.star_button.itemStarChanged.connect()
         self.set_default_sequence.clicked.connect(self.load_selected)
 
         self.setChildrenCollapsible(False)
@@ -173,6 +181,17 @@ class ListImageViewer(QSplitter):
         self.previous_model = self.string_list_model
 
         self.image_loader_thread = ImageLoaderThread()
+
+    def handle_star(self, path):
+        QTimer.singleShot(0, lambda: self.star_button.star_image(path))
+        if path in self.star_button.starred_images():
+            self.string_list_model.insertRow(self.string_list_model.rowCount())
+            self.string_list_model.setData(self.string_list_model.index(self.string_list_model.rowCount() - 1, 0), path)
+            self.select_and_scroll_to(self.string_list_model.index(self.string_list_model.rowCount() - 1, 0))
+        else:
+            index = self.find_item_index(path)
+            if index:
+                self.string_list_model.removeRow(index.row())
 
     def display(self, path, item=None):
         self.previous_model = self.tree_view.model()
@@ -230,6 +249,7 @@ class ListImageViewer(QSplitter):
         """Reimplemented function from QTreeView"""
         self.paint_thumbnail(current)
         self.select_and_scroll_to(current)
+        QTimer.singleShot(0, lambda: self.star_button.handle_star_icon(self.canvas.image_path))
 
     def paint_thumbnail(self, index):
         image_path = self.string_list_model.data(index, 0) if self.tree_view.model() == self.string_list_model \
@@ -294,3 +314,4 @@ class NotificationPopupWidget(QLabel):
 
     def mousePressEvent(self, event):
         self.hide()
+
