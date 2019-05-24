@@ -153,23 +153,13 @@ class ListImageViewer(QSplitter):
         self.canvas = ImageCanvas(self)
 
         self.star_button = StarButton(self)
-        # self.star_image_button = QPushButton("Star image")
-        # self.star_image_button.addAction(self.actionStar)
-        # self.unstar_image_button = QPushButton("Unstar image")
         self.set_default_sequence = QPushButton("Load selected")
-
         self.button_box = QDialogButtonBox(Qt.Vertical, self, centerButtons=True)
-        # self.button_box.addButton(self.star_image_button, QDialogButtonBox.ActionRole)
-        # self.button_box.addButton(self.unstar_image_button, QDialogButtonBox.ActionRole)
-        # self.button_box.addAction(self.actionStar)
         self.button_box.addButton(self.star_button, QDialogButtonBox.ActionRole)
         self.button_box.addButton(self.set_default_sequence, QDialogButtonBox.ActionRole)
 
-        # self.star_image_button.clicked.connect(lambda: self.starChange.emit(self.canvas.image_path))
-        # self.unstar_image_button.clicked.connect(lambda: self.starChange.emit(self.canvas.image_path))
         self.star_button.clicked.connect(lambda: self.handle_star(self.canvas.image_path))
         self.star_button.clicked.connect(lambda: self.starChange.emit(self.canvas.image_path))
-        # self.star_button.itemStarChanged.connect()
         self.set_default_sequence.clicked.connect(self.load_selected)
 
         self.setChildrenCollapsible(False)
@@ -182,8 +172,12 @@ class ListImageViewer(QSplitter):
 
         self.image_loader_thread = ImageLoaderThread()
 
-    def handle_star(self, path):
-        QTimer.singleShot(0, lambda: self.star_button.star_image(path))
+    def handle_star(self, path, update=True):
+        if update:
+            self.star_button.star_image(path)
+        else:
+            self.star_button.handle_star_icon(path)
+            
         if path in self.star_button.starred_images():
             self.string_list_model.insertRow(self.string_list_model.rowCount())
             self.string_list_model.setData(self.string_list_model.index(self.string_list_model.rowCount() - 1, 0), path)

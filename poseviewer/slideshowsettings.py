@@ -126,6 +126,7 @@ class Slideshow(BaseSlideshow):
             self.slideshow_active = True
 
     def next(self):
+        next_interval = 0
         if self.settings_ui.selected_preset() == 0:
             self.start_timer()
         elif self.settings_ui.selected_preset() == 1:

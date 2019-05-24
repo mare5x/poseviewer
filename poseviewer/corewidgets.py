@@ -215,15 +215,17 @@ class TimeElapsedTimer(QObject):
 
 
 class StarActions(QObject):
-    itemStarChanged = Signal()
-
     def __init__(self, qwidget):
         super().__init__(qwidget)
         self.qwidget = qwidget
 
     def starred_images(self):
         settings = Settings()
-        return settings.value('stars', [])
+        stars = settings.value('stars', [])
+        # Reading a list with a single string evaluates to a string instead of a list.
+        if isinstance(stars, str):
+            return [stars] if stars else []
+        return stars
 
     def star_image(self, path):
         settings = Settings()
@@ -233,12 +235,10 @@ class StarActions(QObject):
             starred_images.append(path)
         else:
             starred_images.remove(path)
+        # Trying to save an empty list [] causes errors.
+        settings['stars'] = starred_images if starred_images else ['']
 
         QTimer.singleShot(0, lambda: self.handle_star_icon(path))
-
-        settings['stars'] = starred_images
-
-        signal_emitter(self.itemStarChanged)
 
     def handle_star_icon(self, path):
         if path in self.starred_images():

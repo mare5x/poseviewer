@@ -61,7 +61,7 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
         # self.toolBar.removeAction(self.actionStar)
         # self.toolBar.insertAction(self.actionTimerLabel, self.actionStar)
         self.actionStar.triggered.connect(lambda: self.star_actions.star_image(self.image_path.current))
-        self.actionStar.triggered.connect(lambda: self.list_image_viewer.handle_star(self.image_path.current))
+        self.actionStar.triggered.connect(lambda: self.list_image_viewer.handle_star(self.image_path.current, update=False))
         # self.actionStar.triggered.connect(self.display_list_image_viewer)
         # self.actionStar.triggered.connect(lambda: self.list_image_viewer.handle_star_icon(self.image_path.current))
         self.actionOpen.triggered.connect(self.get_directory)
