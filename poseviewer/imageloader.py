@@ -1,6 +1,5 @@
 ﻿import threading
 import os
-import scandir
 
 
 SUPPORTED_FORMATS_EXTENSIONS = (".bmp", ".gif", ".jpg", ".jpeg", ".png", ".pbm", ".pgm", ".ppm", ".xbm", ".xpm")
@@ -30,7 +29,7 @@ class ImageLoaderThread(threading.Thread):
 
     def load_dir(self, dir_path):
         dir_path = os.path.abspath(dir_path)
-        for path in scandir.listdir(dir_path):
+        for path in os.listdir(dir_path):
             if self.stopped():
                 return
 

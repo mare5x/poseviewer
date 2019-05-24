@@ -1,7 +1,6 @@
 from PySide.QtCore import *
 from PySide.QtGui import *
 import os
-import scandir
 import random
 from contextlib import contextmanager
 from .imageloader import *

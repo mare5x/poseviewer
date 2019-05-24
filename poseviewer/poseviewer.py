@@ -267,15 +267,16 @@ class MainWindow(QMainWindow, poseviewerMainGui.Ui_MainWindow):
                 QMessageBox.critical(self, "Failure", "An error occurred while trying to save the image.")
 
     def eventFilter(self, obj, event):
-        if event.type() == QEvent.MouseMove and not self.force_toolbar_display:
-            rect = self.geometry()
-            rect.setHeight(50)
-            if self.toolBar.isVisible() and not rect.contains(event.globalPos()):
+        if not self.force_toolbar_display:
+            if event.type() == QEvent.MouseMove:
+                rect = self.geometry()
+                rect.setHeight(50)
+                if self.toolBar.isVisible() and not rect.contains(event.globalPos()):
+                    self.toolBar.hide()
+                elif rect.contains(event.globalPos()):
+                    self.toolBar.show()
+            elif event.type() == QEvent.Leave and obj is self:
                 self.toolBar.hide()
-            elif rect.contains(event.globalPos()):
-                self.toolBar.show()
-        elif event.type() == QEvent.Leave and obj is self:
-            self.toolBar.hide()
 
         return QMainWindow.eventFilter(self, obj, event)
 

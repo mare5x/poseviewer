@@ -1,5 +1,3 @@
-#! python3.4
-
 from poseviewer import run
 
 if __name__ == '__main__':
